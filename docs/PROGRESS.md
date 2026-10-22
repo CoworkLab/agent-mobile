@@ -1,7 +1,7 @@
 # Progress
 
 Updated: 2026-10-22
-Session: M5 (brain gateway: providers, router, key storage).
+Session: M6 (the orchestrator loop).
 
 ## Status
 

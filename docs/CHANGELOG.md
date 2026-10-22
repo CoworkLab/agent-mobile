@@ -40,6 +40,18 @@ versioning.
   permissions enabled over `adb`.
 - 24 JVM unit tests, 6 instrumented UI tests.
 
+### Added (M6)
+- `LoopBudget` with the four limits, a sliding-window action rate limit, and a plain-language
+  reason for every stop.
+- `StuckDetector` with an escalating set of hints, replan after three stuck events, and a
+  hand-off to the user after five.
+- `HistoryCompactor` keeping at most two screenshots and one-line summaries for older steps.
+- `AgentPlan` parsing, `PromptBuilder`, and `DecisionParser`.
+- `StepEngine` running decide, guard, act and verify, with the safety refusals in one place.
+- `AgentOrchestrator`, the real loop, including the up-front plan.
+- `assets/prompts/system.md`, the shipped system prompt.
+- 117 new unit tests (462 total).
+
 ### Added (M5)
 - `LlmProvider` and `OpenAiCompatibleProvider` for the OpenAI `/chat/completions` shape,
   covering Gemini, OpenRouter and Groq. Pure request builder, tested JSON.
