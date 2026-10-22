@@ -40,6 +40,20 @@ versioning.
   permissions enabled over `adb`.
 - 24 JVM unit tests, 6 instrumented UI tests.
 
+### Added (M5)
+- `LlmProvider` and `OpenAiCompatibleProvider` for the OpenAI `/chat/completions` shape,
+  covering Gemini, OpenRouter and Groq. Pure request builder, tested JSON.
+- `JsonToolCallParser`: fence stripping, prose trimming, trailing-comma repair,
+  double-encoding unwrap, and brace counting that respects string literals.
+- `LlmErrorClassifier` with `RateLimited`, `Auth`, `BadRequest`, `Server` and `Network`, and
+  provider-supplied retry delays.
+- `ProviderRouter` with ordered failover, per-provider cooldown, vision-aware image
+  stripping, and token counters.
+- `KeystoreSecretCipher`: API keys encrypted at rest with a hardware-backed AES-GCM key.
+- `ProviderRepository` and the provider presets, with the model name intentionally empty.
+- `ConnectionTester` for the "Test connection" button.
+- 130 new unit tests (345 total).
+
 ### Added (M4)
 - 24 tools across touch, text, navigation, info and wait, plus the required `launch_intent`
   and `batch_actions`.

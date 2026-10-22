@@ -1,7 +1,7 @@
 # Progress
 
 Updated: 2026-10-22
-Session: M4 (tools, launch_intent, batch_actions).
+Session: M5 (brain gateway: providers, router, key storage).
 
 ## Status
 
@@ -12,7 +12,7 @@ Session: M4 (tools, launch_intent, batch_actions).
 | M2 Accessibility service, onboarding, FGS, overlay+STOP | DONE | Builds green, 24 unit tests. Emulator verification runs in `e2e-emulator.yml` (M2 adds the workflow). |
 | M3 Perception | DONE | Pure perception logic + live capture, 56 unit tests, emulator artifacts. |
 | M4 Tools (launch_intent, batch_actions) | DONE | 24 tools, intent policy + batch validator, 215 unit tests. |
-| M5 Brain gateway | TODO | Next up. |
+| M5 Brain gateway | DONE | Providers, router with failover, keystore-encrypted keys, connection test. |
 | M6 Orchestrator | TODO | |
 | M7 Safety | TODO | |
 | M8 Memory + skills | TODO | |
