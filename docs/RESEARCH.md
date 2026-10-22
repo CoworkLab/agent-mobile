@@ -26,15 +26,31 @@ consistent with the Kotlin 2.2.x choice.
 
 | Library | Version | Source |
 |---|---|---|
-| Compose BOM | 2026.09.00 | https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/maven-metadata.xml |
+| Compose BOM | 2026.04.01 (Compose 1.11.0) | https://dl.google.com/dl/android/maven2/androidx/compose/compose-bom/maven-metadata.xml — BOM 2026.09.00 maps to Compose 1.12.1 which needs `compileSdk` 37 + AGP 9.1.1, so 2026.04.01 is the newest BOM usable on the AGP 8.13.2 path |
 | Room | 2.8.5 | https://dl.google.com/dl/android/maven2/androidx/room/room-runtime/maven-metadata.xml |
 | DataStore (preferences) | 1.3.0 | https://dl.google.com/dl/android/maven2/androidx/datastore/datastore-preferences/maven-metadata.xml |
-| core-ktx | 1.19.1 | https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/maven-metadata.xml |
-| OkHttp | 5.5.1 | https://repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/maven-metadata.xml |
-| MockWebServer | 5.5.1 | https://repo1.maven.org/maven2/com/squareup/okhttp3/mockwebserver3-junit4/maven-metadata.xml |
+| core-ktx | 1.18.0 | https://dl.google.com/dl/android/maven2/androidx/core/core-ktx/maven-metadata.xml — 1.19.x is the first release requiring `compileSdk` 37 (read from `aar-metadata.properties`: 1.18.0 → 36, 1.19.0 → 37) |
+| activity-compose | 1.13.0 | `aar-metadata.properties` says `minCompileSdk=36`, so this newest release is usable |
+| lifecycle | 2.10.0 | `lifecycle-runtime-compose-android` 2.11.0 needs `compileSdk` 37; 2.10.0 needs 35 |
+| navigation-compose | 2.9.5 | `navigation-compose-android` 2.10.x needs `compileSdk` 37; 2.9.5 needs 35 |
+| OkHttp | 5.4.0 | https://repo1.maven.org/maven2/com/squareup/okhttp3/okhttp/maven-metadata.xml — `okhttp-android` 5.5.1 needs `compileSdk` 37; 5.4.0 needs 36 |
+| MockWebServer | 5.4.0 | same release train as OkHttp |
 | kotlinx.serialization JSON | 1.9.0 | https://repo1.maven.org/maven2/org/jetbrains/kotlinx/kotlinx-serialization-json/maven-metadata.xml |
 
 All versions above were read directly from Maven repository metadata, not from blog posts.
+
+### Why the newest version of each library is not always used
+
+Verified by unzipping `META-INF/com/android/build/gradle/aar-metadata.properties` from each
+AAR. Several July–October 2026 AndroidX releases (`core` 1.19.x, `lifecycle` 2.11.x,
+`navigation` 2.10.x, `okhttp-android` 5.5.1) declare `minCompileSdk=37` and
+`minAgpVersion=9.1.0`. Taking any one of them forces the whole project onto AGP 9.1+ and
+`compileSdk` 37.
+
+The table above is the newest mutually consistent set that builds on AGP 8.13.2 with
+`compileSdk` 36. This was confirmed by a real `assembleDebug`/`assembleRelease` run, not by
+inspection alone. Upgrading past this point is a deliberate, separate migration (see
+DECISIONS #3 and #5).
 
 ## 3. Android platform APIs
 

@@ -85,7 +85,11 @@ Full detail in `docs/TEST_STRATEGY.md`.
 
 - JDK 17 (CI) / JDK 21 (sandbox), Gradle 8.14.6, AGP 8.13.2, Kotlin 2.2.21
 - `compileSdk` 36, `minSdk` 30, `targetSdk` 35
-- Compose BOM 2026.09.00, Room 2.8.5, OkHttp 5.5.1, kotlinx.serialization 1.9.0
+- Compose BOM 2026.04.01 (Compose 1.11.0), Room 2.8.5, OkHttp 5.4.0,
+  kotlinx.serialization 1.9.0, core-ktx 1.18.0, lifecycle 2.10.0, navigation 2.9.5
+- Do **not** bump core-ktx to 1.19.x, lifecycle to 2.11.x, navigation to 2.10.x, or
+  OkHttp to 5.5.x: each requires `compileSdk` 37 and AGP 9.1+. See `docs/RESEARCH.md`.
+- Package / applicationId: `com.phoneagent`
 - Emulator CI: `reactivecircus/android-emulator-runner@v2`, API 34 + API 30, `x86_64`,
   `google_apis`, KVM via udev rules
 

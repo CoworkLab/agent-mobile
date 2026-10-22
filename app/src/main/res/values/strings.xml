@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PhoneAgent</string>
+    <string name="app_description">An on-device agent that controls the phone like a human</string>
+</resources>
