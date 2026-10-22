@@ -40,6 +40,15 @@ versioning.
   permissions enabled over `adb`.
 - 24 JVM unit tests, 6 instrumented UI tests.
 
+### Added (M3)
+- Perception: `ScreenSnapshot`, `UiNode`, `Bounds`, `TreeShaper`, `SnapshotSerializer`,
+  `MarkRenderer`, `AndroidPerceptionSource`.
+- Set-of-marks screenshots downscaled to 1080 and encoded at JPEG 70.
+- Screen hashing for stuck detection, and an image hash for screenshots.
+- Failure classification for secure screens, blank captures, rate limits and missing windows.
+- 32 new unit tests (56 total) and instrumented tests that emit the marked screenshot and
+  the snapshot JSON as workflow artifacts.
+
 ### Fixed
 - Push protection rejected the M1 commit because a live API key had been used as a test
   fixture. The fixture is now synthetic, generated at runtime, and the key is not present

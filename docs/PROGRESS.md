@@ -1,7 +1,7 @@
 # Progress
 
 Updated: 2026-10-22
-Session: M2 (service layer, onboarding, overlay, STOP).
+Session: M3 (perception).
 
 ## Status
 
@@ -10,8 +10,8 @@ Session: M2 (service layer, onboarding, overlay, STOP).
 | M0 Credentials, repo, docs, research | DONE | Keys verified, repo created, toolchain installed, research recorded. |
 | M1 Skeleton + Logger + LogViewer + ci.yml | DONE | Green build: debug + release APK (R8), 11 unit tests, lint clean. |
 | M2 Accessibility service, onboarding, FGS, overlay+STOP | DONE | Builds green, 24 unit tests. Emulator verification runs in `e2e-emulator.yml` (M2 adds the workflow). |
-| M3 Perception | TODO | Next up. |
-| M4 Tools (launch_intent, batch_actions) | TODO | |
+| M3 Perception | DONE | Pure perception logic + live capture, 56 unit tests, emulator artifacts. |
+| M4 Tools (launch_intent, batch_actions) | TODO | Next up. |
 | M5 Brain gateway | TODO | |
 | M6 Orchestrator | TODO | |
 | M7 Safety | TODO | |
@@ -63,12 +63,34 @@ Session: M2 (service layer, onboarding, overlay, STOP).
 - `.github/workflows/e2e-emulator.yml`: enables the service and permissions with `adb`
   on API 34 and API 30, runs the instrumented tests, collects logcat and screenshots.
 
+## Done (M3)
+
+- `ScreenSnapshot` / `UiNode` / `Bounds`: pure data, no Android types, so everything that
+  reasons about a screen runs in plain JVM tests.
+- `TreeShaper`: the rules that decide what the model sees. Drops zero-size and off-screen
+  nodes, drops silent containers, caps depth and node count, and clears a redundant
+  `clickable` flag when a clickable child already carries the label. Assigns marks 1..n in
+  reading order to actionable nodes only.
+- `SnapshotSerializer`: token-efficient text rendering (short class names, non-default
+  fields only, one line per node) plus the `screenHash` used to detect "nothing changed".
+- `MarkRenderer`: set-of-marks drawing, downscale to <= 1080 on the long side, JPEG 70, and
+  a sparse-grid blank/secure detector.
+- `AndroidPerceptionSource`: reads the tree, decides the effective mode, captures a
+  screenshot when needed. Honours the platform's ~1 s screenshot rate limit by tracking the
+  last capture and reporting the remaining cooldown instead of hammering the API.
+- Mode selection: `TREE_ONLY` when the tree is rich, escalate to `TREE_PLUS_SCREENSHOT` when
+  the tree is poor (custom-drawn UI, a full-screen unlabelled surface), `SCREENSHOT_ONLY`
+  when there is no tree at all.
+- Failures are data, not exceptions: `SECURE_SCREEN`, `BLANK_CAPTURE`, `RATE_LIMITED`,
+  `NO_WINDOW`, `UNKNOWN`, each of which the loop can act on.
+- Instrumented tests write the milestone artifacts (`marked-screen.jpg`, `snapshot.json`,
+  `prompt.txt`) and the workflow pulls them off the device.
+
 ## Next
 
-1. M3: perception. Screenshot capture with the platform rate limit respected, UI-tree
-   snapshot, set-of-marks rendering, screen hash. Emulator test must capture a marked
-   screenshot and JSON.
-2. Then M4 onward in order.
+1. M4: tools. `Tool` interface, registry, and the touch/text/navigation/intent tools, with
+   the intent policy and the batch validator. Then M5 (the brain gateway) and M6 (loop).
+2. Fix the emulator job ordering issue noted below if it is still failing.
 
 ## Blockers
 
@@ -91,3 +113,8 @@ Session: M2 (service layer, onboarding, overlay, STOP).
   `ObsoleteSdkInt` warning there is a false positive and is left alone.
 - Do not bump core-ktx to 1.19.x, lifecycle to 2.11.x, navigation to 2.10.x or OkHttp to
   5.5.x: each needs `compileSdk` 37 and AGP 9.1+.
+- `e2e-emulator.yml` must install the APK *before* writing
+  `enabled_accessibility_services`. Android silently ignores that setting for a package that
+  is not installed yet, which makes every perception test skip rather than fail.
+- Compose `assertIsDisplayed()` fails for anything below the fold. The onboarding list is
+  taller than a phone screen, so its test scrolls each row into view first.

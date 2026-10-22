@@ -64,18 +64,25 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             set -x
-            # Grant the permissions the instrumented tests and the service need.
+
+            # Install before touching settings. Enabling the accessibility service for a
+            # package that is not installed yet is silently dropped, so the order matters.
+            ./gradlew installDebug installDebugAndroidTest --stacktrace
+
             adb shell pm grant com.phoneagent.debug android.permission.POST_NOTIFICATIONS || true
             adb shell appops set com.phoneagent.debug SYSTEM_ALERT_WINDOW allow || true
-            adb shell settings put secure enabled_accessibility_services \
-              com.phoneagent.debug/com.phoneagent.service.PhoneAgentAccessibilityService || true
-            adb shell settings put secure accessibility_enabled 1 || true
             adb shell cmd notification allow_listener \
               com.phoneagent.debug/com.phoneagent.service.PhoneAgentNotificationListener || true
 
-            # Record what the device actually reports so failures are diagnosable.
-            adb shell settings get secure enabled_accessibility_services || true
-            adb shell dumpsys accessibility | head -40 || true
+            # Write the accessibility settings last, then read them back: if the service
+            # component is wrong the tests skip, and a wrong name here is the usual cause.
+            adb shell settings put secure enabled_accessibility_services \
+              com.phoneagent.debug/com.phoneagent.service.PhoneAgentAccessibilityService
+            adb shell settings put secure accessibility_enabled 1
+
+            adb shell settings get secure enabled_accessibility_services
+            adb shell settings get secure accessibility_enabled
+            adb shell dumpsys accessibility | head -40
 
             ./gradlew connectedDebugAndroidTest --stacktrace
 
@@ -85,6 +92,14 @@ jobs:
           adb logcat -d > logcat-api${{ matrix.api-level }}.txt || true
           adb shell dumpsys accessibility > dumpsys-accessibility-api${{ matrix.api-level }}.txt || true
 
+      - name: Pull perception artifacts
+        if: always()
+        run: |
+          mkdir -p perception-api${{ matrix.api-level }}
+          adb pull /sdcard/Android/data/com.phoneagent.debug/files/perception \
+            perception-api${{ matrix.api-level }}/ || true
+          ls -la perception-api${{ matrix.api-level }}/ || true
+
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -93,6 +108,7 @@ jobs:
           path: |
             logcat-api*.txt
             dumpsys-accessibility-api*.txt
+            perception-api*/**
             app/build/reports/androidTests/
             app/build/outputs/androidTest-results/
           retention-days: 14

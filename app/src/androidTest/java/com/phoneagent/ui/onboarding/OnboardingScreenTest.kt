@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.phoneagent.ui.MainActivity
 import com.phoneagent.ui.task.TaskTags
@@ -16,6 +17,9 @@ import org.junit.runner.RunWith
  * Onboarding is the only screen the user must complete, so it is verified on a device.
  * These assertions do not depend on permission state: they check the screen renders every
  * permission row and that the navigation gates behave.
+ *
+ * The list is taller than a phone screen, so rows are scrolled into view before being
+ * asserted as displayed; `assertExists` alone would not prove the user can reach them.
  */
 @RunWith(AndroidJUnit4::class)
 class OnboardingScreenTest {
@@ -29,11 +33,17 @@ class OnboardingScreenTest {
         rule.waitForIdle()
 
         rule.onNodeWithTag(OnboardingTags.SCREEN).assertIsDisplayed()
-        rule.onNodeWithTag(OnboardingTags.ROW_PREFIX + "ACCESSIBILITY").assertIsDisplayed()
-        rule.onNodeWithTag(OnboardingTags.ROW_PREFIX + "OVERLAY").assertIsDisplayed()
-        rule.onNodeWithTag(OnboardingTags.ROW_PREFIX + "NOTIFICATIONS").assertIsDisplayed()
-        rule.onNodeWithTag(OnboardingTags.ROW_PREFIX + "NOTIFICATION_LISTENER").assertIsDisplayed()
-        rule.onNodeWithTag(OnboardingTags.ROW_PREFIX + "BATTERY_OPTIMIZATION").assertIsDisplayed()
+        listOf(
+            "ACCESSIBILITY",
+            "OVERLAY",
+            "NOTIFICATIONS",
+            "NOTIFICATION_LISTENER",
+            "BATTERY_OPTIMIZATION",
+        ).forEach { id ->
+            val row = rule.onNodeWithTag(OnboardingTags.ROW_PREFIX + id)
+            row.performScrollTo()
+            row.assertIsDisplayed()
+        }
     }
 
     @Test
@@ -41,8 +51,10 @@ class OnboardingScreenTest {
         rule.onNodeWithTag("tab_setup").performClick()
         rule.waitForIdle()
 
-        rule.onNodeWithTag(OnboardingTags.REFRESH).assertIsDisplayed()
-        rule.onNodeWithTag(OnboardingTags.REFRESH).performClick()
+        val refresh = rule.onNodeWithTag(OnboardingTags.REFRESH)
+        refresh.performScrollTo()
+        refresh.assertIsDisplayed()
+        refresh.performClick()
         rule.waitForIdle()
     }
 
