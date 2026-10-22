@@ -1,7 +1,7 @@
 # Progress
 
 Updated: 2026-10-22
-Session: M3 (perception).
+Session: M4 (tools, launch_intent, batch_actions).
 
 ## Status
 
@@ -11,8 +11,8 @@ Session: M3 (perception).
 | M1 Skeleton + Logger + LogViewer + ci.yml | DONE | Green build: debug + release APK (R8), 11 unit tests, lint clean. |
 | M2 Accessibility service, onboarding, FGS, overlay+STOP | DONE | Builds green, 24 unit tests. Emulator verification runs in `e2e-emulator.yml` (M2 adds the workflow). |
 | M3 Perception | DONE | Pure perception logic + live capture, 56 unit tests, emulator artifacts. |
-| M4 Tools (launch_intent, batch_actions) | TODO | Next up. |
-| M5 Brain gateway | TODO | |
+| M4 Tools (launch_intent, batch_actions) | DONE | 24 tools, intent policy + batch validator, 215 unit tests. |
+| M5 Brain gateway | TODO | Next up. |
 | M6 Orchestrator | TODO | |
 | M7 Safety | TODO | |
 | M8 Memory + skills | TODO | |

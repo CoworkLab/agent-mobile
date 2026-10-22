@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "_comment": "Multilingual risk keywords. Latin keywords are matched on word boundaries; Devanagari on substring because it has no word separators. Extend freely; every list is loaded at runtime and unit tested.",
+  "high": {
+    "en": [
+      "send", "submit", "post", "publish", "pay", "payment", "transfer", "buy", "purchase",
+      "order", "place order", "delete", "remove", "uninstall", "factory reset", "reset",
+      "log out", "logout", "sign out", "allow", "grant", "install", "confirm", "accept",
+      "agree", "share", "subscribe", "checkout", "withdraw", "top up", "recharge",
+      "book now", "place bid", "approve", "authorize", "give access"
+    ],
+    "hi": [
+      "भेजो", "भेजें", "भेज दो", "सबमिट", "पोस्ट", "भुगतान", "पैसे", "खरीदो", "खरीदें",
+      "ऑर्डर", "हटाओ", "हटा दो", "मिटाओ", "डिलीट", "अनइंस्टॉल", "लॉग आउट", "अनुमति दो",
+      "इंस्टॉल", "पुष्टि", "स्वीकार", "साझा करो", "निकालो", "जमा करो", "बुक करो"
+    ],
+    "hinglish": [
+      "bhejo", "bhej do", "bhejde", "submit karo", "post karo", "bhugtan", "paisa bhejo",
+      "kharido", "kharid lo", "order karo", "hatao", "hata do", "mitao", "delete karo",
+      "uninstall karo", "logout karo", "allow karo", "install karo", "confirm karo",
+      "haan", "theek hai", "paise transfer", "payment karo", "book karo", "share karo"
+    ]
+  },
+  "medium": {
+    "en": [
+      "next", "continue", "proceed", "save", "apply", "done", "ok", "yes", "update",
+      "change", "edit", "settings", "permission", "location", "camera", "microphone",
+      "contacts", "download", "upload", "sync"
+    ],
+    "hi": ["आगे", "जारी", "सेव", "लागू", "ठीक", "हाँ", "अपडेट", "बदलो", "सेटिंग", "अनुमति"],
+    "hinglish": ["aage", "save karo", "apply karo", "theek", "ha", "update karo", "setting"]
+  },
+  "blocked": {
+    "en": [
+      "factory reset", "erase all data", "wipe device", "format device",
+      "uninstall system", "device administrator", "grant device admin",
+      "root the device", "enable usb debugging", "install certificate"
+    ],
+    "hi": ["फैक्टरी रीसेट", "सारा डेटा मिटाओ", "डिवाइस एडमिन"],
+    "hinglish": ["factory reset karo", "sara data mitao", "device admin"]
+  },
+  "injection": {
+    "en": [
+      "ignore previous instructions", "ignore all previous", "disregard previous",
+      "forget your instructions", "you are now", "new instructions", "system prompt",
+      "override your", "ignore the above", "do not tell the user", "without asking"
+    ],
+    "hi": ["पिछले निर्देश भूल जाओ", "निर्देश अनदेखा करो", "सिस्टम प्रॉम्प्ट"],
+    "hinglish": ["pichle nirdesh bhool jao", "instructions ignore karo", "system prompt"]
+  },
+  "payment_uri_schemes": [
+    "upi", "paytm", "phonepe", "gpay", "tez", "bhim", "amazonpay", "mobikwik",
+    "bharatpe", "freecharge"
+  ]
+}

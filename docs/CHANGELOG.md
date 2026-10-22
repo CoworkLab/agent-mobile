@@ -40,6 +40,18 @@ versioning.
   permissions enabled over `adb`.
 - 24 JVM unit tests, 6 instrumented UI tests.
 
+### Added (M4)
+- 24 tools across touch, text, navigation, info and wait, plus the required `launch_intent`
+  and `batch_actions`.
+- `ToolRegistry`: per-call timeouts, exception safety, and function schemas for the model.
+- `assets/intent_policy.json` and `IntentValidator`: default-deny intent policy, `upi:` and
+  `file:` blocked, resolved-package denylist check, and an audit row for every call.
+- `BatchValidator` and `layoutHash`: whole-batch pre-validation, live re-guarding, target
+  identity checks, and a layout hash that ignores typed text.
+- `RiskClassifier` with English, Hindi and Hinglish keywords, `PackageDenylist`, and
+  `InjectionDetector`.
+- 78 new unit tests (215 total) and instrumented tests over the real assets and actuator.
+
 ### Added (M3)
 - Perception: `ScreenSnapshot`, `UiNode`, `Bounds`, `TreeShaper`, `SnapshotSerializer`,
   `MarkRenderer`, `AndroidPerceptionSource`.

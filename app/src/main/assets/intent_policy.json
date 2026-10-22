@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "_comment": "Intent policy. Default deny: an action not listed in allowed_low or allowed_medium is BLOCKED, as are the always_blocked actions and any intent resolving to a denylisted package. An allowed intent may only open or prefill; it never completes a risky action.",
+  "allowed_low": [
+    "android.intent.action.VIEW",
+    "android.intent.action.WEB_SEARCH",
+    "android.intent.action.SHOW_ALARMS",
+    "android.intent.action.DIAL",
+    "android.intent.action.SENDTO",
+    "android.intent.action.SEND",
+    "android.intent.action.SEND_MULTIPLE",
+    "android.intent.action.MAIN",
+    "android.intent.action.VIEW_DOWNLOADS",
+    "android.intent.action.GET_CONTENT",
+    "android.intent.action.PICK",
+    "android.intent.action.CHOOSER",
+    "android.intent.action.SEARCH",
+    "android.intent.action.MEDIA_PLAY_FROM_SEARCH"
+  ],
+  "allowed_medium": [
+    "android.intent.action.SET_ALARM",
+    "android.intent.action.SET_TIMER",
+    "android.intent.action.INSERT",
+    "android.intent.action.EDIT",
+    "android.intent.action.INSERT_OR_EDIT",
+    "android.intent.action.CREATE_DOCUMENT"
+  ],
+  "always_blocked": [
+    "android.intent.action.CALL",
+    "android.intent.action.CALL_PRIVILEGED",
+    "android.intent.action.CALL_BUTTON",
+    "android.intent.action.DELETE",
+    "android.intent.action.UNINSTALL_PACKAGE",
+    "android.intent.action.PACKAGE_INSTALL",
+    "android.intent.action.PACKAGE_REMOVED",
+    "android.intent.action.FACTORY_RESET",
+    "android.intent.action.MASTER_CLEAR",
+    "android.app.action.ADD_DEVICE_ADMIN",
+    "android.app.action.SET_NEW_PASSWORD",
+    "android.intent.action.SET_WALLPAPER"
+  ],
+  "allowed_uri_schemes": [
+    "http", "https", "geo", "mailto", "sms", "smsto", "tel", "market",
+    "content", "google.navigation", "android_app"
+  ],
+  "blocked_uri_schemes": [
+    "file", "intent", "javascript", "data", "blob"
+  ],
+  "allowed_settings_prefix": "android.settings.",
+  "max_uri_length": 2048,
+  "max_extra_bytes": 8192
+}
