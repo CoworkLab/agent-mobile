@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Accessibility service configuration.
+
+  Deliberately conservative: no event flood, only the capabilities the agent needs.
+  - canTakeScreenshot: API 30+ screen capture (rate limited by the platform).
+  - canPerformGestures: tap / swipe / long press via dispatchGesture.
+  - canRetrieveWindowContent: read the accessibility tree.
+  - flagRetrieveInteractiveWindows: walk the full window list, not just the active window.
+  - flagReportViewIds: needed to identify stable elements across re-reads.
+-->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowContentChanged|typeViewClicked|typeViewFocused|typeViewTextChanged|typeViewLongClicked|typeViewScrolled"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows|flagReportViewIds|flagIncludeNotImportantViews|flagRequestFilterKeyEvents"
+    android:canPerformGestures="true"
+    android:canRetrieveWindowContent="true"
+    android:canTakeScreenshot="true"
+    android:description="@string/accessibility_service_description"
+    android:notificationTimeout="100"
+    android:settingsActivity="com.phoneagent.ui.MainActivity" />

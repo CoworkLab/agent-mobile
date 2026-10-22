@@ -25,3 +25,24 @@ versioning.
 - Tests: 11 JVM unit tests, 3 instrumented Compose UI tests.
 - Verified locally: `assembleDebug`, `assembleRelease`, `testDebugUnitTest`, `lintDebug`
   all pass.
+- `AccessibilityService` with a conservative event config, capability reporting and
+  active-window access for later perception and action work.
+- `NotificationListenerService` for reading notifications as untrusted input.
+- `AgentForegroundService` hosting the agent loop with a persistent notification that
+  always carries a STOP action.
+- `AgentController` state machine with an injectable step runner and cooperative
+  cancellation, so STOP takes effect within one step.
+- Draggable always-visible STOP overlay bubble.
+- Onboarding screen with live permission checks, settings deep links and restricted-settings
+  guidance for sideloaded installs.
+- Task / Setup / Logs navigation.
+- `e2e-emulator.yml` running instrumented tests on API 34 and API 30 with the service and
+  permissions enabled over `adb`.
+- 24 JVM unit tests, 6 instrumented UI tests.
+
+### Fixed
+- Push protection rejected the M1 commit because a live API key had been used as a test
+  fixture. The fixture is now synthetic, generated at runtime, and the key is not present
+  anywhere in git history.
+- CI failed at "Set up Android SDK": the setup action's interactive license prompt exits 1
+  on this runner image. Replaced with a direct, non-interactive `sdkmanager` call.

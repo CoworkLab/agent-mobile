@@ -1,16 +1,16 @@
 # Progress
 
 Updated: 2026-10-22
-Session: M1 (skeleton, logging, CI).
+Session: M2 (service layer, onboarding, overlay, STOP).
 
 ## Status
 
 | Milestone | Status | Notes |
 |---|---|---|
 | M0 Credentials, repo, docs, research | DONE | Keys verified, repo created, toolchain installed, research recorded. |
-| M1 Skeleton + Logger + LogViewer + ci.yml | DONE | Green build verified locally: debug APK, release APK (R8), 11 unit tests, lint clean. |
-| M2 Accessibility service, onboarding, FGS, overlay+STOP | TODO | Next up. |
-| M3 Perception | TODO | |
+| M1 Skeleton + Logger + LogViewer + ci.yml | DONE | Green build: debug + release APK (R8), 11 unit tests, lint clean. |
+| M2 Accessibility service, onboarding, FGS, overlay+STOP | DONE | Builds green, 24 unit tests. Emulator verification runs in `e2e-emulator.yml` (M2 adds the workflow). |
+| M3 Perception | TODO | Next up. |
 | M4 Tools (launch_intent, batch_actions) | TODO | |
 | M5 Brain gateway | TODO | |
 | M6 Orchestrator | TODO | |
@@ -42,11 +42,33 @@ Session: M1 (skeleton, logging, CI).
 - M1: 11 JVM unit tests (Logger behaviour, masking) and 3 instrumented Compose UI tests
   for the Log Viewer.
 
+## Done (M2)
+
+- `PhoneAgentAccessibilityService`: connects, reports its capabilities, exposes the active
+  window bounds and root node for M3/M4. Config in `res/xml/accessibility_service_config.xml`.
+- `PhoneAgentNotificationListener`: records notification text as untrusted input.
+- `AgentForegroundService`: hosts the loop in the background, owns the persistent
+  notification with a STOP action, `specialUse` FGS type for API 34+.
+- `AgentController`: the state machine, with the planner injected as a `stepRunner` so the
+  loop is JVM-testable and M6 can drop the real brain in unchanged. Cancellation is
+  cooperative with a `yield()` between steps, so STOP lands within one step.
+- `StopOverlay`: draggable always-visible red STOP bubble over other apps.
+- `StopActionReceiver`: STOP from the notification or the bubble, works without the UI.
+- Onboarding: live permission checks, deep links to each settings page, battery-optimisation
+  step, and a card explaining "Allow restricted settings" for sideloaded apps on API 33+.
+- `MainActivity` rebuilt as Task / Setup / Logs, opening on Setup until the core three
+  permissions are on.
+- `PermissionChecks`: every Android call wrapped, so a vendor ROM quirk degrades to
+  "not granted" instead of crashing.
+- `.github/workflows/e2e-emulator.yml`: enables the service and permissions with `adb`
+  on API 34 and API 30, runs the instrumented tests, collects logcat and screenshots.
+
 ## Next
 
-1. M2: `AccessibilityService` skeleton, in-app onboarding that walks the user through
-   enabling it, foreground service, and a floating overlay with a STOP button.
-2. Then M3 onward in order.
+1. M3: perception. Screenshot capture with the platform rate limit respected, UI-tree
+   snapshot, set-of-marks rendering, screen hash. Emulator test must capture a marked
+   screenshot and JSON.
+2. Then M4 onward in order.
 
 ## Blockers
 
@@ -56,3 +78,16 @@ Session: M1 (skeleton, logging, CI).
 
 - None. Credentials for `GITHUB_TOKEN` and `GEMINI_API_KEY` received; repo name chosen as
   `agent-mobile` per instruction.
+
+## Notes for the next session
+
+- **Push protection caught a real leak in M1**: the live Gemini key had been pasted into
+  `SecretMaskerTest.kt`. It is now a synthetic value built at runtime. Never paste a real
+  credential into a test; the `SecretMasker` tests use obvious placeholders on purpose.
+- `android-actions/setup-android@v3` fails on this runner image: it runs
+  `sdkmanager --licenses`, which prompts `y/N` with no stdin and exits 1. `ci.yml` now
+  calls `sdkmanager` directly with the licenses piped in.
+- `res/mipmap-anydpi-v26` must keep the `-v26` qualifier for the adaptive icon. Lint's
+  `ObsoleteSdkInt` warning there is a false positive and is left alone.
+- Do not bump core-ktx to 1.19.x, lifecycle to 2.11.x, navigation to 2.10.x or OkHttp to
+  5.5.x: each needs `compileSdk` 37 and AGP 9.1+.

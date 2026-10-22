@@ -25,13 +25,13 @@ data class LogViewerUiState(
 
 class LogViewerViewModel(
     private val logger: Logger,
-    private val context: Context,
+    private val appContext: Context,
 ) : ViewModel() {
 
-    private val fileSink = FileLogSink(context)
+    private val fileSink = FileLogSink(appContext)
 
     private val _minLevel = MutableStateFlow(LogLevel.VERBOSE)
-    private val _lastCrash = MutableStateFlow(CrashHandler.consumeLastCrash(context))
+    private val _lastCrash = MutableStateFlow(CrashHandler.consumeLastCrash(appContext))
     private val _copied = MutableStateFlow(false)
 
     private val _toast = MutableStateFlow<String?>(null)

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PhoneAgent</string>
-    <string name="app_description">An on-device agent that controls the phone like a human</string>
+
+    <string name="overlay_stop">STOP</string>
+    <string name="accessibility_service_label">PhoneAgent</string>
+    <string name="notification_listener_label">PhoneAgent notifications</string>
+    <string name="accessibility_service_description">Lets PhoneAgent read the screen and tap, swipe and type on your behalf when you ask it to do a task. You can turn this off at any time in Settings.</string>
 </resources>
