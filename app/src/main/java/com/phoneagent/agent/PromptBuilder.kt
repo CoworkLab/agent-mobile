@@ -34,6 +34,14 @@ class PromptBuilder(
         lastResult: String? = null,
         userAnswer: String? = null,
         stepIndex: Int = 0,
+        /**
+         * The skill index, if any skill applies to the current screen.
+         *
+         * Only the index: names, one-line descriptions and the apps they apply to. The bodies
+         * are fetched with `load_skill` when the model decides one is relevant, which keeps
+         * every prompt small no matter how many skills exist.
+         */
+        skillIndex: String = "",
     ): Built {
         val messages = mutableListOf<LlmMessage>()
 
@@ -44,6 +52,12 @@ class PromptBuilder(
                 appendLine()
                 appendLine("YOUR PLAN:")
                 appendLine(plan.asPromptText())
+                appendLine()
+                if (skillIndex.isNotBlank()) {
+                    appendLine()
+                    appendLine("SKILLS:")
+                    appendLine(skillIndex)
+                }
                 appendLine()
                 appendLine("STEP: ${stepIndex + 1} of ${limits.maxSteps}")
             },

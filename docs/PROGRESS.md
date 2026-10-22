@@ -1,7 +1,7 @@
 # Progress
 
 Updated: 2026-10-22
-Session: M7 (safety: audit log, confirmations, approval resume).
+Session: M8 (memory and skills).
 
 ## Status
 
@@ -16,7 +16,7 @@ Session: M7 (safety: audit log, confirmations, approval resume).
 | M6 Orchestrator | TODO | |
 | M7 Safety | TODO | |
 | M8 Memory + skills | TODO | |
-| M9 Voice, UX, settings, self-test, updater | TODO | |
+| M9 Voice, UX, settings, self-test, updater | TODO | Next up. |
 | M10 Testbed + 23 scenarios + fixtures | TODO | |
 | M11 LLM-in-the-loop tuning + hardening | TODO | |
 | M12 Signing, release, v1.0.0 | TODO | |

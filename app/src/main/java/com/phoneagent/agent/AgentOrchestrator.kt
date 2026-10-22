@@ -41,6 +41,13 @@ class AgentOrchestrator(
     private val limits: LoopLimits = LoopLimits.DEFAULT,
     private val injectionDetector: com.phoneagent.safety.InjectionDetector =
         com.phoneagent.safety.InjectionDetector(com.phoneagent.safety.KeywordSets.EMPTY),
+    /**
+     * The skills the model may read.
+     *
+     * The prompt gets only the index for the current app, and `load_skill` fetches a body. A
+     * library that is not shared here simply means no skills are offered.
+     */
+    private val skills: com.phoneagent.memory.SkillLibrary = com.phoneagent.memory.SkillLibrary(),
     private val perceptionMode: () -> PerceptionMode = { PerceptionMode.TREE_PLUS_SCREENSHOT },
 ) {
 

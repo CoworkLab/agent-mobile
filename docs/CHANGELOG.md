@@ -40,6 +40,16 @@ versioning.
   permissions enabled over `adb`.
 - 24 JVM unit tests, 6 instrumented UI tests.
 
+### Added (M8)
+- `SensitiveDataFilter`: removes passwords, one-time codes, PINs and card numbers, with a Luhn
+  check so order numbers are not mistaken for cards.
+- `MemoryStore` with the profile, episodic and procedural layers, filtering on every write.
+- `Skill`, `SkillParser`, `SkillLibrary` and `BundledSkills`: markdown skills with front
+  matter, an index-only prompt, and a draft status that cannot be loaded.
+- Five bundled skills as assets, plus a test that none of them contains a coordinate.
+- `LoadSkillTool` and `SkillDraftPolicy`.
+- 107 new unit tests (631 total).
+
 ### Added (M7)
 - `AuditEvent`, the Room table and DAO, and `RoomAuditLog` plus `InMemoryAuditLog`.
 - `AuditFormatter` and `AuditPolicy`: plain-language wording, retention, pruning and search,
