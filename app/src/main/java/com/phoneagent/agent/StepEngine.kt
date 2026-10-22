@@ -25,6 +25,12 @@ class StepEngine(
     private val registry: ToolRegistry,
     private val guard: SafetyGuard,
     private val confirmations: ConfirmationGate,
+    /**
+     * Every decision is recorded here, including the ones that never ran. The refusals are
+     * the interesting rows: they are what explains a run that stopped early.
+     */
+    private val audit: com.phoneagent.audit.AuditLog = com.phoneagent.audit.InMemoryAuditLog(),
+    private val stepIndexProvider: () -> Int = { 0 },
 ) {
 
     /** What happened in this step. */
@@ -135,14 +141,18 @@ class StepEngine(
         val verdict = guard.assessToolAndTarget(toolName, tool.riskLevel, target)
 
         when (verdict.level) {
-            RiskLevel.BLOCKED -> return Outcome.Rejected(
-                toolName,
-                "That action is blocked: ${verdict.reason}. " +
-                    "Tell the user it cannot be done and stop trying.",
-            )
+            RiskLevel.BLOCKED -> {
+                record(toolName, tool.riskLevel, com.phoneagent.audit.AuditDecision.BLOCKED, verdict.reason, snapshot)
+                return Outcome.Rejected(
+                    toolName,
+                    "That action is blocked: ${verdict.reason}. " +
+                        "Tell the user it cannot be done and stop trying.",
+                )
+            }
 
             RiskLevel.HIGH -> {
-                // The user must decide. The loop pauses, and a refusal is remembered.
+                // The user must decide. The loop pauses here; the outcome is recorded when the
+                // answer arrives, because "waiting" is not the same as "denied".
                 confirmations.request(toolCall, verdict.reason)
                 return Outcome.NeedsConfirmation(
                     tool = toolName,
@@ -156,6 +166,17 @@ class StepEngine(
         }
 
         val result = registry.execute(toolCall, currentContext(snapshot), registryTimeout(toolName))
+        record(
+            toolName,
+            verdict.level,
+            if (result.success) {
+                com.phoneagent.audit.AuditDecision.ALLOWED
+            } else {
+                com.phoneagent.audit.AuditDecision.FAILED
+            },
+            result.message,
+            snapshot,
+        )
         return Outcome.Acted(
             tool = toolName,
             note = result.message,
@@ -210,8 +231,90 @@ class StepEngine(
         else -> ToolResult.fail("Unknown tool $toolName.")
     }
 
+    /**
+     * Runs a call the person has already approved.
+     *
+     * The guard is consulted again, because the screen may have moved while the question was
+     * on screen. If it has become blocked, the refusal wins: an approval for one action on one
+     * screen is not an approval for anything else.
+     */
+    suspend fun runApproved(toolName: String, args: Map<String, Any?>, snapshot: ScreenSnapshot): Outcome {
+        val tool = registry.get(toolName)
+            ?: return Outcome.Rejected(toolName, "There is no tool called \"$toolName\".")
+        val toolCall = ToolCall(toolName, args)
+
+        // The package check comes first. An approval for one action on one screen is not an
+        // approval to act inside a restricted app, which may have become the current screen
+        // while the question was open.
+        guard.packageRefusalReason(snapshot.packageName)?.let { refusal ->
+            record(toolName, tool.riskLevel, com.phoneagent.audit.AuditDecision.BLOCKED, refusal, snapshot)
+            return Outcome.Rejected(toolName, "$refusal The approved action was not run.")
+        }
+
+        val target = resolveTarget(args, snapshot)
+        val verdict = guard.assessToolAndTarget(toolName, tool.riskLevel, target)
+        if (verdict.level == RiskLevel.BLOCKED) {
+            record(toolName, tool.riskLevel, com.phoneagent.audit.AuditDecision.BLOCKED, verdict.reason, snapshot)
+            return Outcome.Rejected(toolName, "That action is blocked: ${verdict.reason}.")
+        }
+
+        val result = registry.execute(toolCall, currentContext(snapshot), registryTimeout(toolName))
+        record(
+            toolName,
+            verdict.level,
+            com.phoneagent.audit.AuditDecision.APPROVED,
+            result.message,
+            snapshot,
+        )
+        return Outcome.Acted(
+            tool = toolName,
+            note = result.message,
+            screenChanged = result.screenChanged ?: true,
+            success = result.success,
+        )
+    }
+
+    /** Records that the person said no, or did not answer. */
+    suspend fun recordConfirmationOutcome(
+        toolName: String,
+        risk: RiskLevel,
+        approved: Boolean,
+        timedOut: Boolean,
+        snapshot: ScreenSnapshot,
+    ) {
+        val decision = when {
+            approved -> com.phoneagent.audit.AuditDecision.APPROVED
+            timedOut -> com.phoneagent.audit.AuditDecision.TIMED_OUT
+            else -> com.phoneagent.audit.AuditDecision.DENIED
+        }
+        record(toolName, risk, decision, "confirmation", snapshot)
+    }
+
     /** The reason to refuse everything in a package, or null when it is allowed. */
     fun refusalReasonFor(packageName: String?): String? = guard.packageRefusalReason(packageName)
+
+    /**
+     * Writes one audit row.
+     *
+     * The detail is the tool's own message, which is already short and describes the element
+     * rather than the whole screen. The log masks and truncates again on the way in.
+     */
+    private suspend fun record(
+        toolName: String,
+        risk: RiskLevel,
+        decision: com.phoneagent.audit.AuditDecision,
+        detail: String,
+        snapshot: ScreenSnapshot,
+    ) {
+        audit.record(
+            toolName = toolName,
+            risk = risk,
+            decision = decision,
+            detail = detail,
+            packageName = snapshot.packageName,
+            stepIndex = stepIndexProvider(),
+        )
+    }
 
     private fun registryTimeout(toolName: String) = ToolRegistry.timeoutFor(toolName)
 

@@ -55,6 +55,16 @@ class AgentOrchestrator(
     private var lastSnapshot: ScreenSnapshot? = null
     private var prepared = false
 
+    /**
+     * The action waiting for approval, and the person's answer once it arrives.
+     *
+     * This is what makes an approval resume the exact call that was shown, rather than letting
+     * the model choose again. Re-deciding would be a safety hole: the model could pick
+     * something worse the second time, and the approval would appear to cover it.
+     */
+    private var awaitingApproval: ToolCall? = null
+    private var approvalAnswer: Boolean? = null
+
     /** The plan the agent is following, for the UI. */
     val currentPlan: AgentPlan get() = plan
 
@@ -67,10 +77,20 @@ class AgentOrchestrator(
         userAnswer = null
         lastSnapshot = null
         prepared = false
+        awaitingApproval = null
+        approvalAnswer = null
     }
 
     fun recordUserAnswer(text: String) {
         userAnswer = text
+    }
+
+    /** The call waiting for approval, for the overlay and the notification. */
+    val pendingApproval: ToolCall? get() = awaitingApproval
+
+    /** Called by the UI when the person answers a confirmation. */
+    fun recordApproval(approved: Boolean) {
+        approvalAnswer = approved
     }
 
     /**
@@ -138,6 +158,45 @@ class AgentOrchestrator(
 
         val snapshot = observe()
         lastSnapshot = snapshot
+
+        // An approval that arrived while the loop was paused is used here, before anything
+        // else, so the approved action runs against the screen the person was looking at.
+        awaitingApproval?.let { call ->
+            val approved = approvalAnswer
+            awaitingApproval = null
+            approvalAnswer = null
+
+            if (approved == null) {
+                return StepOutcome.Continue("Still waiting for your answer.")
+            }
+            if (!approved) {
+                engine.recordConfirmationOutcome(
+                    call.name,
+                    com.phoneagent.safety.RiskLevel.HIGH,
+                    approved = false,
+                    timedOut = false,
+                    snapshot = snapshot,
+                )
+                val note = "The user declined the ${call.name} action. Do not repeat it. " +
+                    "Try a different way, or ask what they would prefer."
+                lastResult = note
+                return StepOutcome.Continue(note)
+            }
+
+            return when (val outcome = engine.runApproved(call.name, call.args, snapshot)) {
+                is StepEngine.Outcome.Acted -> {
+                    lastResult = outcome.note
+                    recordHistory(stepIndex, outcome.tool, outcome.note, snapshot)
+                    if (outcome.success) budget.recordStep()
+                    StepOutcome.Continue(outcome.note)
+                }
+                is StepEngine.Outcome.Rejected -> {
+                    lastResult = outcome.note
+                    StepOutcome.Continue(outcome.note)
+                }
+                else -> StepOutcome.Continue("The approved action did not run.")
+            }
+        }
 
         // A restricted app stops the run before any decision is made, which is cheaper and
         // safer than letting the model pick an action and then refusing it.
@@ -266,8 +325,9 @@ class AgentOrchestrator(
         }
 
         is StepEngine.Outcome.NeedsConfirmation -> {
-            // The loop pauses here. When the user answers, the controller resumes and this
-            // same step runs again; the guard will then let it through or refuse it.
+            // The loop pauses here. The call is remembered so the answer applies to this exact
+            // action; the next step runs it rather than asking the model to decide again.
+            awaitingApproval = outcome.call
             lastResult = "Waiting for your approval: ${outcome.reason}"
             StepOutcome.WaitingUser("${outcome.reason} May I go ahead?")
         }

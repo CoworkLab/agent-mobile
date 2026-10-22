@@ -40,6 +40,16 @@ versioning.
   permissions enabled over `adb`.
 - 24 JVM unit tests, 6 instrumented UI tests.
 
+### Added (M7)
+- `AuditEvent`, the Room table and DAO, and `RoomAuditLog` plus `InMemoryAuditLog`.
+- `AuditFormatter` and `AuditPolicy`: plain-language wording, retention, pruning and search,
+  all as pure functions.
+- `AndroidConfirmationGate` and `PendingConfirmation`: timeout is a denial, the pending call
+  is remembered, and the context is the screen the question was asked about.
+- `StepEngine.runApproved`, so an approval resumes the exact call that was shown.
+- `AuditDetail`, the one place a detail string is masked and truncated.
+- 62 new unit tests (524 total).
+
 ### Added (M6)
 - `LoopBudget` with the four limits, a sliding-window action rate limit, and a plain-language
   reason for every stop.

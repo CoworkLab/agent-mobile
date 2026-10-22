@@ -1,7 +1,7 @@
 # Progress
 
 Updated: 2026-10-22
-Session: M6 (the orchestrator loop).
+Session: M7 (safety: audit log, confirmations, approval resume).
 
 ## Status
 
