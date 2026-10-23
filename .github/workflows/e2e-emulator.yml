@@ -73,15 +73,17 @@ jobs:
             # rather than from the Play store because it exists only for these tests.
             ./gradlew installDebug installDebugAndroidTest :testbed:installDebug --stacktrace
 
+            # Each command goes on one line. The emulator runner executes the script a line
+            # at a time, so a backslash continuation is not joined: the first half runs with a
+            # missing argument and the job fails before any test starts. That is what made the
+            # last runs red while `connectedDebugAndroidTest` never actually ran.
             adb shell pm grant com.phoneagent.debug android.permission.POST_NOTIFICATIONS || true
             adb shell appops set com.phoneagent.debug SYSTEM_ALERT_WINDOW allow || true
-            adb shell cmd notification allow_listener \
-              com.phoneagent.debug/com.phoneagent.service.PhoneAgentNotificationListener || true
+            adb shell cmd notification allow_listener com.phoneagent.debug/com.phoneagent.service.PhoneAgentNotificationListener || true
 
             # Write the accessibility settings last, then read them back: if the service
             # component is wrong the tests skip, and a wrong name here is the usual cause.
-            adb shell settings put secure enabled_accessibility_services \
-              com.phoneagent.debug/com.phoneagent.service.PhoneAgentAccessibilityService
+            adb shell settings put secure enabled_accessibility_services com.phoneagent.debug/com.phoneagent.service.PhoneAgentAccessibilityService
             adb shell settings put secure accessibility_enabled 1
 
             adb shell settings get secure enabled_accessibility_services

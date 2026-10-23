@@ -80,18 +80,14 @@ jobs:
 
             adb shell pm grant com.phoneagent.debug android.permission.POST_NOTIFICATIONS || true
             adb shell appops set com.phoneagent.debug SYSTEM_ALERT_WINDOW allow || true
-            adb shell cmd notification allow_listener \
-              com.phoneagent.debug/com.phoneagent.service.PhoneAgentNotificationListener || true
-            adb shell settings put secure enabled_accessibility_services \
-              com.phoneagent.debug/com.phoneagent.service.PhoneAgentAccessibilityService
+            # One command per line: the emulator runner does not join backslash continuations.
+            adb shell cmd notification allow_listener com.phoneagent.debug/com.phoneagent.service.PhoneAgentNotificationListener || true
+            adb shell settings put secure enabled_accessibility_services com.phoneagent.debug/com.phoneagent.service.PhoneAgentAccessibilityService
             adb shell settings put secure accessibility_enabled 1
 
             # The suite is one test class; the runner retries inside it. `-e` passes the key and
             # the model to the instrumentation, where they never touch disk.
-            ./gradlew connectedDebugAndroidTest --stacktrace \
-              -Pandroid.testInstrumentationRunnerArguments.class=com.phoneagent.eval.EvalInstrumentedTest \
-              -Pandroid.testInstrumentationRunnerArguments.evalApiKey="$EVAL_API_KEY" \
-              -Pandroid.testInstrumentationRunnerArguments.evalModel="${{ inputs.model || 'gemini-2.0-flash' }}"
+            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.class=com.phoneagent.eval.EvalInstrumentedTest -Pandroid.testInstrumentationRunnerArguments.evalApiKey="$EVAL_API_KEY" -Pandroid.testInstrumentationRunnerArguments.evalModel="${{ inputs.model || 'gemini-2.0-flash' }}"
 
       - name: Pull the eval report
         if: always()

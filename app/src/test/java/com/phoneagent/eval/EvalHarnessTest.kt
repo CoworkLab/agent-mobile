@@ -2,6 +2,8 @@ package com.phoneagent.eval
 
 import com.phoneagent.agent.AgentOrchestrator
 import com.phoneagent.agent.ConfirmationGate
+import com.phoneagent.agent.AskUserTool
+import com.phoneagent.agent.FinishTool
 import com.phoneagent.agent.LoopLimits
 import com.phoneagent.agent.StepEngine
 import com.phoneagent.agent.StepOutcome
@@ -42,22 +44,8 @@ class EvalHarnessTest {
 
     private fun logger() = Logger().apply { minLevel = LogLevel.WARN }
 
-    private fun snapshot(hash: String = "h") = ScreenSnapshot(
-        packageName = "com.phoneagent.testbed",
-        windowTitle = null,
-        timestampMs = 0,
-        nodes = emptyList(),
-        screenHash = hash,
-    )
-
     private class ScriptedPerception : PerceptionSource {
-        override suspend fun capture(mode: PerceptionMode): ScreenSnapshot = ScreenSnapshot(
-            packageName = "com.phoneagent.testbed",
-            windowTitle = null,
-            timestampMs = 0,
-            nodes = emptyList(),
-            screenHash = "h",
-        )
+        override suspend fun capture(mode: PerceptionMode): ScreenSnapshot = snapshot()
 
         override fun isAvailable(): Boolean = true
         override fun screenshotCooldownMs(): Long = 0
@@ -117,7 +105,9 @@ class EvalHarnessTest {
 
     private fun orchestrator(provider: LlmProvider): AgentOrchestrator {
         val gate = DenyGate()
-        val registry = ToolRegistry(logger(), emptyList())
+        // The terminal tools have to be present: a run cannot finish, ask or fail without
+        // them, and their absence would look like a model that never decides.
+        val registry = ToolRegistry(logger(), listOf(FinishTool(), AskUserTool()))
         val denylist = PackageDenylist(emptyList())
         return AgentOrchestrator(
             perception = ScriptedPerception(),
@@ -263,3 +253,30 @@ class EvalHarnessTest {
         )
     }
 }
+
+/**
+ * A screen with one node.
+ *
+ * Not empty on purpose: the orchestrator treats a tree with nothing in it as unusable and
+ * refuses to decide, which is correct but not what these tests are about.
+ */
+private fun snapshot(hash: String = "h") = ScreenSnapshot(
+    packageName = "com.phoneagent.testbed",
+    windowTitle = null,
+    timestampMs = 0,
+    nodes = listOf(
+        com.phoneagent.perception.UiNode(
+            nodeId = 1,
+            parentId = null,
+            depth = 0,
+            className = "android.widget.Button",
+            text = "Send",
+            contentDescription = null,
+            viewId = null,
+            bounds = com.phoneagent.perception.Bounds(0, 0, 100, 100),
+            clickable = true,
+            mark = 1,
+        ),
+    ),
+    screenHash = hash,
+)
