@@ -61,6 +61,26 @@ class ReplayFixtureTest {
     private fun replay(run: RecordedRun) {
         val harness = ScenarioHarness()
 
+        // Every reply is queued before the first step. Queueing them one per iteration would
+        // work only by accident, because the model hands back the oldest queued reply: a reply
+        // added just before step N would be consumed at step N+1.
+        run.steps.forEach { step ->
+            val reply = step.reply
+            harness.model.willReply(
+                if (reply.tool != null) {
+                    LlmResponse(
+                        text = reply.text,
+                        toolCalls = listOf(
+                            ToolCallRequest(name = reply.tool, argumentsJson = reply.argumentsJson),
+                        ),
+                        providerName = "Fixture",
+                    )
+                } else {
+                    LlmResponse(text = reply.text, providerName = "Fixture")
+                },
+            )
+        }
+
         run.steps.forEachIndexed { index, step ->
             harness.screen(
                 hash = step.screen.hash,
@@ -68,21 +88,6 @@ class ReplayFixtureTest {
                 nodes = step.screen.nodes.map(::node),
                 failure = failure(step.screen.failure),
             )
-
-            val reply = step.reply
-            if (reply.tool != null) {
-                harness.model.willReply(
-                    LlmResponse(
-                        text = reply.text,
-                        toolCalls = listOf(
-                            ToolCallRequest(name = reply.tool, argumentsJson = reply.argumentsJson),
-                        ),
-                        providerName = "Fixture",
-                    ),
-                )
-            } else {
-                harness.model.willReply(LlmResponse(text = reply.text, providerName = "Fixture"))
-            }
 
             val outcome = runBlocking { harness.orchestrator.step(run.goal, index) }
 
