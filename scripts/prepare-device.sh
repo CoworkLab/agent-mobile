@@ -68,3 +68,19 @@ if [ -z "$bound" ]; then
 else
   echo "accessibility service is bound"
 fi
+
+echo "== Disabling the service again, cleanly =="
+# Leaving it enabled and bound is what broke the run. Starting the instrumentation force-stops
+# the app, which kills the process the service is bound to, and the system records a service
+# whose process died under `Crashed services` — and then will not bind it again, however many
+# times the setting is written. `dumpsys accessibility` after such a run showed the component in
+# `Enabled services` and in `Crashed services` at once, with `Bound services` empty.
+#
+# Unbinding it here, before the instrumentation starts, avoids that: the system lets go of it
+# cleanly, nothing is bound when the app is force-stopped, and the tests then enable it into the
+# process they are already running in. The enable above is not wasted — it is what proves the
+# component name and the service itself are good, which is worth knowing before a run of tests
+# blames them for something else.
+adb shell settings put secure enabled_accessibility_services none
+adb shell settings put secure accessibility_enabled 0
+adb shell settings delete secure enabled_accessibility_services > /dev/null || true
