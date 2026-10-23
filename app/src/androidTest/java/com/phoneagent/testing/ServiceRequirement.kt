@@ -19,10 +19,9 @@ import org.junit.Assume.assumeTrue
  * accessibility dump at the end of a run shows this plainly: `Enabled services:{}`.
  *
  * There is no hook to run between that install and the first test, so the setup is repeated
- * here, from inside the run: enable the component, start the app to clear the stopped state that
- * a fresh install leaves it in, and wait for the system to bind. This costs nothing when the
- * service is already up, which is the case on a developer's machine, and the tests that assert
- * on what is on screen are left undisturbed because the app is not started for them.
+ * here, from inside the run. This costs nothing when the service is already up, which is the
+ * case on a developer's machine, and the tests that assert on what is on screen are left
+ * undisturbed because the app is not started for them.
  *
  * When the service cannot be brought up: on the E2E job, which sets it up on purpose, that is a
  * failure, because a skip there would hide a real regression. Anywhere else it is a skip, so a
@@ -33,6 +32,7 @@ object ServiceRequirement {
 
     private const val ARGUMENT = "requireAccessibility"
     private const val TIMEOUT_MS = 30_000L
+    private const val BIND_ATTEMPT_MS = 5_000L
     private const val POLL_MS = 250L
 
     private val required: Boolean
@@ -40,9 +40,7 @@ object ServiceRequirement {
 
     fun requireRunning() {
         if (!PhoneAgentAccessibilityService.isRunning()) {
-            enableTheService()
-            startTheAppToClearTheStoppedState()
-            waitForService()
+            bringTheServiceUp()
         }
         val running = PhoneAgentAccessibilityService.isRunning()
         if (required) {
@@ -54,6 +52,30 @@ object ServiceRequirement {
             )
         } else {
             assumeTrue("Accessibility service not enabled; see e2e-emulator.yml", running)
+        }
+    }
+
+    /**
+     * Starts the app and then enables the service, in that order.
+     *
+     * The order is the whole trick. The system does not bind the services of a stopped package,
+     * so enabling first records the component but binds nothing — and once the app is started
+     * nothing revisits the decision, because the setting has not changed again. Observed on the
+     * E2E job: the write landed while the freshly reinstalled package was still stopped, the
+     * activity came up a moment later, and the service stayed unbound for the whole run.
+     */
+    private fun bringTheServiceUp() {
+        startTheAppToClearTheStoppedState()
+        SystemClock.sleep(2_000)
+
+        // The enable is written more than once on purpose. The system decides whether to bind
+        // when the setting changes, so a write that lands while the package is still stopped is
+        // recorded and then ignored; writing it again once the app is up gives the system a
+        // fresh reason to look.
+        val deadline = SystemClock.uptimeMillis() + TIMEOUT_MS
+        while (SystemClock.uptimeMillis() < deadline) {
+            enableTheService()
+            if (waitForService(BIND_ATTEMPT_MS)) return
         }
     }
 
@@ -75,12 +97,14 @@ object ServiceRequirement {
         runCatching { context.startActivity(intent) }
     }
 
-    private fun waitForService() {
-        val deadline = SystemClock.uptimeMillis() + TIMEOUT_MS
+    /** True once the service is up, false if it did not come up within [timeoutMs]. */
+    private fun waitForService(timeoutMs: Long): Boolean {
+        val deadline = SystemClock.uptimeMillis() + timeoutMs
         while (SystemClock.uptimeMillis() < deadline) {
-            if (PhoneAgentAccessibilityService.isRunning()) return
+            if (PhoneAgentAccessibilityService.isRunning()) return true
             SystemClock.sleep(POLL_MS)
         }
+        return PhoneAgentAccessibilityService.isRunning()
     }
 
     /**
