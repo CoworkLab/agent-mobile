@@ -5,41 +5,38 @@ import android.os.Bundle
 import androidx.test.runner.AndroidJUnitRunner
 
 /**
- * The test runner, which keeps UiAutomation from suppressing the accessibility service.
+ * The test runner, which keeps UiAutomation from switching off the accessibility service.
  *
  * This is the reason the device tests spent a long time skipping. The scenarios drive the testbed
- * through UiAutomator, and a `UiAutomation` connection switches off every other accessibility
- * service on the device while it is held. That is deliberate — it keeps an automated run from
- * being disturbed — but it means the service under test is destroyed the moment the runner sets
- * up, and no amount of enabling it from the outside brings it back. The accessibility dump tells
- * the story: the component is in `Enabled services`, and `Bound services` is empty.
+ * through UiAutomator, and a `UiAutomation` connection suppresses every other accessibility
+ * service on the device while it is held. That is deliberate — an automated run should not fight
+ * the user's accessibility tools — but it means the service under test is destroyed as soon as
+ * the runner sets up. Enabling it again from the outside could never work: the connection that
+ * suppressed it was still open, and `dumpsys accessibility` showed the component in
+ * `Enabled services` with `Bound services` empty, and in `Crashed services` besides.
  *
- * `FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES` opts out. It has to be set when the instance is
- * created and the instance is cached, so it is set here, before the tests can ask for one, and
- * every later `getUiAutomation()` — including the one UiAutomator makes — gets this same
- * connection. This is the fix the UiAutomator2 server in Appium uses.
+ * `FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES` opts out. Setting it once is not enough, because
+ * `UiAutomation` is cached together with the flags it was created with: the framework and
+ * UiAutomator both ask for one with no flags, and that call discards the flagged instance and
+ * replaces it with a suppressing one. The logcat of the run that first exposed this shows the
+ * two connections, the second with `flags=0`.
  *
- * It also has to happen before `super.onCreate`: the parent starts the instrumentation, and the
- * suppression would otherwise be applied on the connection it makes on the way through.
- *
- * It is asked for at both points where the framework lets a runner run code before the tests,
- * because which of them is early enough depends on when the framework first reaches for a
- * connection. The instance is cached after the first call, so the second is a no-op; if the
- * first did not take, the tests say so loudly rather than the run quietly losing the service.
+ * So the flag is added to whatever flags are asked for, on both entry points. Every caller —
+ * the framework, UiAutomator, the tests — then shares the one connection that does not suppress,
+ * which is what the UiAutomator2 server in Appium does for the same reason.
  */
 class PhoneAgentTestRunner : AndroidJUnitRunner() {
 
     override fun onCreate(arguments: Bundle) {
-        keepAccessibilityServicesAlive()
+        // Before super.onCreate: the parent starts the instrumentation, and a connection made on
+        // the way through would otherwise be the suppressing kind.
+        getUiAutomation()
         super.onCreate(arguments)
     }
 
-    override fun onStart() {
-        keepAccessibilityServicesAlive()
-        super.onStart()
-    }
-
-    private fun keepAccessibilityServicesAlive() {
+    override fun getUiAutomation(): UiAutomation =
         getUiAutomation(UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
-    }
+
+    override fun getUiAutomation(flags: Int): UiAutomation =
+        super.getUiAutomation(flags or UiAutomation.FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES)
 }
