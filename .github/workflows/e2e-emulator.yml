@@ -18,7 +18,7 @@ jobs:
     name: Instrumented tests (API ${{ matrix.api-level }})
     runs-on: ubuntu-latest
     # Below the one-hour cap on purpose: a hung step then leaves time to still run the
-    # collect-and-upload steps rather than being killed with the logs unread.
+    # upload step rather than being killed with the logs unread.
     timeout-minutes: 45
 
     strategy:
@@ -68,31 +68,18 @@ jobs:
             set -x
 
             # Device setup lives in a script so it can be run the same way by hand. The runner
-            # executes each line separately, which is why this is one line and not a sequence
-            # of adb calls: it also means the ordering and the bound-service check inside the
-            # script cannot be silently skipped.
+            # executes each line separately, so this is one line rather than a sequence of adb
+            # calls: that also keeps the ordering and the bound-service check inside the script,
+            # where they cannot be silently skipped.
             bash scripts/prepare-device.sh
 
-            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.requireAccessibility=true
+            # The tests and the log collection share state, so they run in one script. See the
+            # note at the top of it for why that has to be a single process.
+            bash scripts/run-device-tests.sh ${{ matrix.api-level }}
 
-      - name: Collect logcat
-        if: always()
-        # `adb logcat -d` blocks forever when the emulator runner has already shut the device
-        # down, which is exactly what happens here: the previous step tears it down on failure.
-        # Without the timeout the job hangs until the one-hour job limit and the artifacts that
-        # explain the failure are never uploaded.
-        run: |
-          timeout 30 adb logcat -d > logcat-api${{ matrix.api-level }}.txt || true
-          timeout 30 adb shell dumpsys accessibility > dumpsys-accessibility-api${{ matrix.api-level }}.txt || true
-          ls -la logcat-api${{ matrix.api-level }}.txt || true
-
-      - name: Pull perception artifacts
-        if: always()
-        run: |
-          mkdir -p perception-api${{ matrix.api-level }}
-          adb pull /sdcard/Android/data/com.phoneagent.debug/files/perception \
-            perception-api${{ matrix.api-level }}/ || true
-          ls -la perception-api${{ matrix.api-level }}/ || true
+      # The logs are collected inside the script above, while the emulator is up. A step here
+      # would run after the emulator action has torn the device down, which is what left every
+      # artifact empty and the first failures unreadable.
 
       - name: Upload artifacts
         if: always()

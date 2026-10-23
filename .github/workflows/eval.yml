@@ -81,14 +81,18 @@ jobs:
             bash scripts/prepare-device.sh
 
             # The suite is one test class; the runner retries inside it. `-e` passes the key and
-            # the model to the instrumentation, where they never touch disk.
-            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.requireAccessibility=true -Pandroid.testInstrumentationRunnerArguments.class=com.phoneagent.eval.EvalInstrumentedTest -Pandroid.testInstrumentationRunnerArguments.evalApiKey="$EVAL_API_KEY" -Pandroid.testInstrumentationRunnerArguments.evalModel="${{ inputs.model || 'gemini-2.0-flash' }}"
+            # the model to the instrumentation, where they never touch disk. The report is pulled
+            # by the same script, while the emulator is still up.
+            # One line, no backslash continuations: the runner executes the script a line at a
+            # time and does not join them.
+            bash scripts/run-device-tests.sh 34 -Pandroid.testInstrumentationRunnerArguments.class=com.phoneagent.eval.EvalInstrumentedTest -Pandroid.testInstrumentationRunnerArguments.evalApiKey="$EVAL_API_KEY" -Pandroid.testInstrumentationRunnerArguments.evalModel="${{ inputs.model || 'gemini-2.0-flash' }}"
 
-      - name: Pull the eval report
+      - name: Read the eval report
         if: always()
+        # The emulator is gone by now, so this reads what the test run already pulled rather
+        # than reaching for the device again.
         run: |
           mkdir -p eval-out
-          adb pull /sdcard/Android/data/com.phoneagent.debug/files/eval-report.md eval-out/ || true
           cat eval-out/eval-report.md || echo "no report was produced"
 
       - name: Append the result to the report file
