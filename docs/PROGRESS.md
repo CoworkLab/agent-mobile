@@ -17,11 +17,26 @@ Session: M10 (testbed, the 23 required scenarios, and record/replay fixtures).
 | M7 Safety | DONE | Risk classifier, denylist, injection detector, intent policy, confirmation gate. |
 | M8 Memory + skills | DONE | Memory store and the draft-skill flow. |
 | M9 Voice, UX, settings, self-test, updater | DONE | Settings, voice, history, memory, skills, self-test screens; version check and APK verification. |
-| M10 Testbed + 23 scenarios + fixtures | IN PROGRESS | Testbed app, 23 scenarios automated, record/replay fixtures, device tests. |
+| M10 Testbed + 23 scenarios + fixtures | DONE | Testbed app, 23 scenarios automated, record/replay fixtures, and the device suite green on API 30 and 34: `OK (30 tests)`, nothing skipped. |
 | M11 LLM-in-the-loop tuning + hardening | TODO | |
 | M12 Signing, release, v1.0.0 | TODO | |
 
 ## Done (M10)
+
+- The emulator suite runs `OK (30 tests)` on API 30 and API 34 with no skips. Getting there
+  took four separate faults, all of which presented identically — the accessibility service
+  enabled in settings, unbound, and the tests that need it failing or quietly skipping. They
+  are written up under "Making the accessibility service survive an instrumented run" in
+  `AGENTS.md`; read that before touching the device setup or the test runner.
+- Two scenarios were failing for reasons that were bugs in the app rather than the test. A
+  `FLAG_SECURE` window is redacted rather than refused: `takeScreenshot` returns a black frame
+  with no error, and the blank check that exists for that case was running after the marks were
+  drawn, so the black had red boxes painted over it and the snapshot claimed success. The check
+  now runs on the raw capture. The testbed's buttons also keep their authored case, because the
+  platform's uppercase transform reaches the accessibility tree and made "Target item 47"
+  unfindable.
+- The eval job read `secrets.EVAL_API_KEY`, which had never been set, so the key arrived empty
+  and the test skipped while the job reported green. It reads `secrets.GEMINI_API_KEY`.
 
 - `testbed/` app (`com.phoneagent.testbed`, debug-only, no INTERNET permission) with the
   screens the brief asks for: chat with a Send button, a three-field form, a custom-drawn
