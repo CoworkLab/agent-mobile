@@ -204,13 +204,21 @@ class ScriptedPerception : PerceptionSource {
     /** How many captures fail with a blank screen before the real one is returned. */
     var failures = 0
 
+    private var capturesUntilSwap: Int? = null
+    private var swapTo: ScreenSnapshot? = null
+
     /**
-     * A screen to switch to after the next successful capture.
+     * Replaces the screen on a later capture, counted from now.
      *
-     * This is how a mid-batch layout change is modelled: the batch re-reads the screen between
-     * actions, so swapping it here is exactly what a popup appearing would look like.
+     * This is how a screen moving under a tool is modelled. The count matters: a tool like
+     * `batch_actions` reads the screen several times (once before validating, once before each
+     * action, once after), and "the popup appeared before the batch looked" and "the popup
+     * appeared after the first action" are different scenarios that need different counts.
      */
-    var next: ScreenSnapshot? = null
+    fun swapScreenAfter(captures: Int, screen: ScreenSnapshot) {
+        capturesUntilSwap = captures
+        swapTo = screen
+    }
 
     override suspend fun capture(mode: PerceptionMode): ScreenSnapshot {
         if (failures > 0) {
@@ -219,9 +227,14 @@ class ScriptedPerception : PerceptionSource {
                 "failed", null, emptyList(), SnapshotFailure.BLANK_CAPTURE,
             )
         }
-        next?.let {
-            next = null
-            snapshot = it
+        capturesUntilSwap?.let { remaining ->
+            if (remaining <= 1) {
+                swapTo?.let { snapshot = it }
+                capturesUntilSwap = null
+                swapTo = null
+            } else {
+                capturesUntilSwap = remaining - 1
+            }
         }
         return snapshot
     }

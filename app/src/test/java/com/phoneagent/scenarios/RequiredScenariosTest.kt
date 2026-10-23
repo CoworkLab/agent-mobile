@@ -641,12 +641,16 @@ class RequiredScenariosTest {
         )
         val batch = harness.registry.get("batch_actions")!!
 
-        // A popup appears after the first action. The batch refreshes the screen between
-        // actions, so this is a screen that moved under it: the marks no longer exist and it
-        // must stop rather than type into whatever is at mark 1 now.
-        harness.perception.next = ScenarioHarness.snapshotOf(
-            "popup", "com.example.app",
-            listOf(ScenarioHarness.button("Allow notifications", mark = 1)),
+        // A popup appears after the first action. The batch reads the screen before
+        // validating (1), before the first action (2), and again after it (3), so the swap is
+        // counted to land on the third read: the first action runs, and the change is then
+        // noticed with the second action still to go.
+        harness.perception.swapScreenAfter(
+            3,
+            ScenarioHarness.snapshotOf(
+                "popup", "com.example.app",
+                listOf(ScenarioHarness.button("Allow notifications", mark = 1)),
+            ),
         )
         val result = batch.execute(
             ToolCall(
