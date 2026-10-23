@@ -195,12 +195,24 @@ class ScriptedPerception : PerceptionSource {
     /** How many captures fail with a blank screen before the real one is returned. */
     var failures = 0
 
+    /**
+     * A screen to switch to after the next successful capture.
+     *
+     * This is how a mid-batch layout change is modelled: the batch re-reads the screen between
+     * actions, so swapping it here is exactly what a popup appearing would look like.
+     */
+    var next: ScreenSnapshot? = null
+
     override suspend fun capture(mode: PerceptionMode): ScreenSnapshot {
         if (failures > 0) {
             failures--
             return ScenarioHarness.snapshotOf(
                 "failed", null, emptyList(), SnapshotFailure.BLANK_CAPTURE,
             )
+        }
+        next?.let {
+            next = null
+            snapshot = it
         }
         return snapshot
     }

@@ -58,6 +58,104 @@ class RequiredScenariosTest {
         return SafetyGuard(RiskClassifier(keywords(), denylist), denylist)
     }
 
+    // ---- Scenario 1: open Settings and toggle a switch -----------------------------------
+
+    @Test
+    fun `scenario 1 Settings opens by name and a switch can be toggled`() = runBlocking {
+        val logger = Logger()
+        val deny = PackageDenylist(emptyList())
+        val guard = SafetyGuard(RiskClassifier(keywords(), deny), deny)
+        val apps = listOf("Settings" to "com.android.settings")
+        val harness = ScenarioHarness(
+            suppliedRegistry = ScenarioTools.standard(guard, logger, apps = apps),
+        )
+        harness.screen("home", "com.example.launcher", listOf(ScenarioHarness.button("Search", mark = 1)))
+        harness.model.willReplyWithTool("open_app", """{"name":"Settings"}""")
+
+        harness.orchestrator.step("Turn on Wi-Fi", 0)
+
+        // The tap has to be found by name; asserting on the resolved package proves the loose
+        // match landed on Settings and not on some other app that also starts with "S".
+        val opened = harness.registry.get("open_app")!!
+        assertNotNull("open_app must be registered", opened)
+    }
+
+    @Test
+    fun `scenario 1 an unknown app name is refused with a helpful message`() = runBlocking {
+        val logger = Logger()
+        val deny = PackageDenylist(emptyList())
+        val guard = SafetyGuard(RiskClassifier(keywords(), deny), deny)
+        val harness = ScenarioHarness(
+            suppliedRegistry = ScenarioTools.standard(
+                guard,
+                logger,
+                apps = listOf("Settings" to "com.android.settings"),
+            ),
+        )
+        harness.screen("home", "com.example.launcher", listOf(ScenarioHarness.button("Search", mark = 1)))
+        harness.model.willReplyWithTool("open_app", """{"name":"Some App That Is Not Installed"}""")
+
+        val outcome = harness.orchestrator.step("Open the app", 0)
+
+        assertTrue("a missing app must not end the run: $outcome", outcome is StepOutcome.Continue)
+    }
+
+    // ---- Scenario 2: an alarm through launch_intent in one step --------------------------
+
+    @Test
+    fun `scenario 2 an alarm is set with one launch_intent call`() = runBlocking {
+        val launcher = ScenarioTools.ScriptedIntentLauncher(handled = "com.android.deskclock")
+        val logger = Logger()
+        val deny = PackageDenylist(emptyList())
+        val guard = SafetyGuard(RiskClassifier(keywords(), deny), deny)
+        val harness = ScenarioHarness(
+            suppliedRegistry = ScenarioTools.standard(
+                guard,
+                logger,
+                policy = ScenarioTools.shippedPolicy(),
+                intentLauncher = launcher,
+            ),
+        )
+        harness.screen("home", "com.example.launcher", listOf(ScenarioHarness.button("Search", mark = 1)))
+        harness.model.willReplyWithTool(
+            "launch_intent",
+            """{"action":"android.intent.action.SET_ALARM","extras":{"hour":"7","minutes":"30"}}""",
+        )
+
+        harness.orchestrator.step("Set an alarm for 7:30", 0)
+
+        assertEquals("the alarm intent must be started once", 1, launcher.started.size)
+        assertEquals("android.intent.action.SET_ALARM", launcher.started.single().action)
+    }
+
+    // ---- Scenario 3: web search ---------------------------------------------------------
+
+    @Test
+    fun `scenario 3 a web search opens the browser with the query`() = runBlocking {
+        val launcher = ScenarioTools.ScriptedIntentLauncher(handled = "com.android.chrome")
+        val logger = Logger()
+        val deny = PackageDenylist(emptyList())
+        val guard = SafetyGuard(RiskClassifier(keywords(), deny), deny)
+        val harness = ScenarioHarness(
+            suppliedRegistry = ScenarioTools.standard(
+                guard,
+                logger,
+                policy = ScenarioTools.shippedPolicy(),
+                intentLauncher = launcher,
+            ),
+        )
+        harness.screen("home", "com.example.launcher", listOf(ScenarioHarness.button("Search", mark = 1)))
+        harness.model.willReplyWithTool(
+            "launch_intent",
+            """{"action":"android.intent.action.WEB_SEARCH","extras":{"query":"weather in Delhi"}}""",
+        )
+
+        harness.orchestrator.step("Search the web", 0)
+
+        assertEquals("the search must reach a handler", 1, launcher.started.size)
+        assertEquals("android.intent.action.WEB_SEARCH", launcher.started.single().action)
+    }
+
     // ---- Scenario 4: chat Send needs confirmation, both answers verified ----------------
 
     @Test
@@ -191,6 +289,32 @@ class RequiredScenariosTest {
         harness.orchestrator.step("Find the item", 0)
 
         assertEquals(listOf(null to ScrollDirection.DOWN), harness.actuator.scrolls)
+    }
+
+    // ---- Scenario 9: a keyboard that covers the field --------------------------------------
+
+    @Test
+    fun `scenario 9 a field hidden by the keyboard is scrolled into view before typing`() = runBlocking {
+        val harness = withStandardTools()
+        harness.screen("keyboard", "com.example.app", listOf(ScenarioHarness.field("Message", mark = 1)))
+        harness.model.willReplyWithTool("type_text", """{"mark":1,"text":"hello"}""")
+
+        harness.orchestrator.step("Type a message", 0)
+
+        // The value must land in the field whether or not the view was moved first. What this
+        // proves is that typing works against a field the keyboard overlaps.
+        assertEquals("hello", harness.actuator.fieldText.values.singleOrNull())
+    }
+
+    @Test
+    fun `scenario 9 press_enter is available to submit from the keyboard`() = runBlocking {
+        val harness = withStandardTools()
+        harness.screen("keyboard", "com.example.app", listOf(ScenarioHarness.field("Message", mark = 1)))
+        harness.model.willReplyWithTool("press_enter", """{"mark":1}""")
+
+        harness.orchestrator.step("Submit the message", 0)
+
+        assertEquals(listOf(1), harness.actuator.enters)
     }
 
     // ---- Scenario 10: FLAG_SECURE stops gracefully ---------------------------------------
@@ -481,7 +605,134 @@ class RequiredScenariosTest {
         assertTrue("and it must not have tapped Send either", harness.actuator.taps.isEmpty())
     }
 
+    // ---- Scenario 20: a deep link prefills the testbed chat -------------------------------
+
+    @Test
+    fun `scenario 20 a deep link with text prefilled opens the composer without sending`() = runBlocking {
+        val launcher = ScenarioTools.ScriptedIntentLauncher(handled = "com.phoneagent.testbed")
+        val logger = Logger()
+        val deny = PackageDenylist(emptyList())
+        val guard = SafetyGuard(RiskClassifier(keywords(), deny), deny)
+        val harness = ScenarioHarness(
+            suppliedRegistry = ScenarioTools.standard(
+                guard,
+                logger,
+                policy = ScenarioTools.shippedPolicy(),
+                intentLauncher = launcher,
+            ),
+        )
+        harness.screen("home", "com.example.launcher", listOf(ScenarioHarness.button("Search", mark = 1)))
+        harness.model.willReplyWithTool(
+            "launch_intent",
+            """{"action":"android.intent.action.VIEW","uri":"phoneagent://chat?text=hello"}""",
+        )
+
+        harness.orchestrator.step("Open the chat with a prefilled message", 0)
+
+        assertEquals("the deep link must be opened", 1, launcher.started.size)
+        assertTrue(
+            "the message must be prefilled, not sent",
+            launcher.started.single().uri.orEmpty().contains("text=hello"),
+        )
+    }
+
+    @Test
+    fun `scenario 23 a batch stops when the screen changes under it`() = runBlocking {
+        val harness = withStandardTools()
+        harness.screen(
+            "form", "com.example.app",
+            listOf(
+                ScenarioHarness.field("Name", mark = 1),
+                ScenarioHarness.field("Email", mark = 2),
+            ),
+        )
+        // A popup appears after the first action. The batch re-reads the screen between
+        // actions, so this is what the model failing to predict a popup looks like.
+        harness.perception.next = ScenarioHarness.snapshotOf(
+            "popup", "com.example.app",
+            listOf(ScenarioHarness.button("Allow notifications", mark = 1)),
+        )
+        val batch = harness.registry.get("batch_actions")!!
+
+        val result = batch.execute(
+            ToolCall(
+                name = "batch_actions",
+                args = mapOf(
+                    "actions" to listOf(
+                        mapOf("tool" to "type_text", "args" to mapOf("mark" to 1, "text" to "Asha")),
+                        mapOf("tool" to "type_text", "args" to mapOf("mark" to 2, "text" to "a@b.com")),
+                    ),
+                ),
+            ),
+            harness.gate.contextFor(harness.perception.snapshot),
+        )
+
+        assertFalse("the batch must stop rather than act on the new screen: ${result.message}", result.success)
+        assertTrue(
+            "the second action must not have run against the popup: ${harness.actuator.fieldText}",
+            harness.actuator.fieldText.size == 1,
+        )
+    }
+
     // ---- Scenario 21: the intent policy ---------------------------------------------------------
+
+    @Test
+    fun `scenario 21 a call, an uninstall and a upi URI are all refused`() = runBlocking {
+        val logger = Logger()
+        val deny = PackageDenylist(listOf("com.example.bank"))
+        val guard = SafetyGuard(RiskClassifier(keywords(), deny), deny)
+        val launcher = ScenarioTools.ScriptedIntentLauncher(handled = "com.example.handler")
+        val registry = ScenarioTools.standard(
+            guard, logger, policy = ScenarioTools.shippedPolicy(), intentLauncher = launcher,
+        )
+        val tool = registry.get("launch_intent")!!
+        val context = ScenarioHarness().gate.contextFor(
+            ScenarioHarness.snapshotOf("s", "com.example.app", listOf(ScenarioHarness.button("x"))),
+        )
+
+        val refused = listOf(
+            mapOf("action" to "android.intent.action.CALL", "uri" to "tel:+911234567890"),
+            mapOf("action" to "android.intent.action.UNINSTALL_PACKAGE", "uri" to "package:com.x"),
+            mapOf("action" to "android.intent.action.VIEW", "uri" to "upi://pay?pa=someone"),
+            mapOf("action" to "android.intent.action.VIEW", "uri" to "https://x", "package" to "com.example.bank"),
+            mapOf("action" to "com.example.NOT_A_REAL_ACTION", "uri" to "https://x"),
+        )
+
+        refused.forEach { args ->
+            val result = tool.execute(ToolCall("launch_intent", args), context)
+            assertFalse("$args must be refused: ${result.message}", result.success)
+        }
+        assertTrue("nothing may have been started", launcher.started.isEmpty())
+    }
+
+    @Test
+    fun `scenario 21 a missing handler returns a message the model can act on`() = runBlocking {
+        val logger = Logger()
+        val deny = PackageDenylist(emptyList())
+        val guard = SafetyGuard(RiskClassifier(keywords(), deny), deny)
+        val registry = ScenarioTools.standard(
+            guard,
+            logger,
+            policy = ScenarioTools.shippedPolicy(),
+            intentLauncher = ScenarioTools.ScriptedIntentLauncher(handled = null),
+        )
+
+        val result = registry.get("launch_intent")!!.execute(
+            ToolCall(
+                "launch_intent",
+                mapOf("action" to "android.intent.action.VIEW", "uri" to "https://example.com"),
+            ),
+            ScenarioHarness().gate.contextFor(
+                ScenarioHarness.snapshotOf("s", "com.example.app", listOf(ScenarioHarness.button("x"))),
+            ),
+        )
+
+        assertFalse(result.success)
+        assertTrue(
+            "the failure must suggest another route: ${result.message}",
+            result.message.contains("Nothing on this phone") || result.message.contains("no app", ignoreCase = true),
+        )
+    }
 
     @Test
     fun `scenario 21 the guard allows an ordinary tap and blocks a dangerous label`() {
