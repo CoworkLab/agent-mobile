@@ -85,7 +85,7 @@ jobs:
             # by the same script, while the emulator is still up.
             # One line, no backslash continuations: the runner executes the script a line at a
             # time and does not join them.
-            bash scripts/run-device-tests.sh 34 -Pandroid.testInstrumentationRunnerArguments.class=com.phoneagent.eval.EvalInstrumentedTest -Pandroid.testInstrumentationRunnerArguments.evalApiKey="$EVAL_API_KEY" -Pandroid.testInstrumentationRunnerArguments.evalModel="${{ inputs.model || 'gemini-2.0-flash' }}"
+            bash scripts/run-device-tests.sh 34 -e class com.phoneagent.eval.EvalInstrumentedTest -e evalApiKey="$EVAL_API_KEY" -e evalModel="${{ inputs.model || 'gemini-2.0-flash' }}"
 
       - name: Read the eval report
         if: always()

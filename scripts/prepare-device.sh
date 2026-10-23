@@ -61,10 +61,9 @@ done
 adb shell dumpsys accessibility | head -40
 
 if [ -z "$bound" ]; then
-  # A warning, not a failure. Binding is the system's to schedule and the test runner reinstalls
-  # the app just before the tests, which unbinds it again — so a service that is about to come
-  # up here can legitimately read as unbound. The tests themselves wait for it and, on a run that
-  # requires it, fail if it never arrives, which is the check that matters.
+  # A warning, not a failure. Binding is the system's to schedule, and the tests wait for it and
+  # fail if it never arrives, which is the check that matters. Failing here would turn a slow
+  # emulator into a red build before a single test had run.
   echo "warning: the accessibility service is enabled but not bound yet" >&2
 else
   echo "accessibility service is bound"

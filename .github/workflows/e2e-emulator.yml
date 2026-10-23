@@ -87,9 +87,8 @@ jobs:
         with:
           name: e2e-api${{ matrix.api-level }}
           path: |
+            instrument-api*.txt
             logcat-api*.txt
             dumpsys-accessibility-api*.txt
             perception-api*/**
-            app/build/reports/androidTests/
-            app/build/outputs/androidTest-results/
           retention-days: 14

@@ -22,7 +22,9 @@ android {
         versionCode = ciRunNumber
         versionName = "0.1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Our own runner, so UiAutomation does not switch off the accessibility service the
+        // scenarios are testing. See PhoneAgentTestRunner.
+        testInstrumentationRunner = "com.phoneagent.testing.PhoneAgentTestRunner"
         vectorDrawables.useSupportLibrary = true
     }
 
