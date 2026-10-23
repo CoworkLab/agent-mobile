@@ -67,7 +67,9 @@ jobs:
 
             # Install before touching settings. Enabling the accessibility service for a
             # package that is not installed yet is silently dropped, so the order matters.
-            ./gradlew installDebug installDebugAndroidTest --stacktrace
+            # The testbed app is what the device-level scenarios drive. It is installed here
+            # rather than from the Play store because it exists only for these tests.
+            ./gradlew installDebug installDebugAndroidTest :testbed:installDebug --stacktrace
 
             adb shell pm grant com.phoneagent.debug android.permission.POST_NOTIFICATIONS || true
             adb shell appops set com.phoneagent.debug SYSTEM_ALERT_WINDOW allow || true

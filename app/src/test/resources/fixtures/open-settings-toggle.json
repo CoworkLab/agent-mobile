@@ -1,0 +1,30 @@
+{
+  "name": "open-settings-toggle",
+  "goal": "Turn on Wi-Fi in Settings",
+  "steps": [
+    {
+      "screen": {
+        "packageName": "com.android.settings",
+        "hash": "settings-root",
+        "nodes": [
+          { "mark": 1, "text": "Network & internet", "clickable": true, "bounds": [0, 300, 1080, 420] },
+          { "mark": 2, "text": "Connected devices", "clickable": true, "bounds": [0, 420, 1080, 540] }
+        ]
+      },
+      "reply": { "tool": "tap", "argumentsJson": "{\"mark\":1}" },
+      "outcome": "continue"
+    },
+    {
+      "screen": {
+        "packageName": "com.android.settings",
+        "hash": "settings-network",
+        "nodes": [
+          { "mark": 1, "text": "Wi-Fi", "clickable": true, "bounds": [0, 300, 1080, 420] },
+          { "mark": 2, "text": "Mobile network", "clickable": true, "bounds": [0, 420, 1080, 540] }
+        ]
+      },
+      "reply": { "tool": "finish", "argumentsJson": "{\"summary\":\"Wi-Fi is on.\"}" },
+      "outcome": "done"
+    }
+  ]
+}

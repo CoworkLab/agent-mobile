@@ -170,7 +170,14 @@ class RequiredScenariosTest {
 
         harness.orchestrator.step("Dismiss the popup", 0)
 
-        assertEquals(listOf(2), harness.actuator.taps.map { it.first })
+        // The actuator records where the tap landed, not which mark asked for it. Asserting on
+        // the point is the stronger check: it proves the mark was resolved to the right element.
+        val close = ScenarioHarness.button("Close", mark = 2).bounds
+        val (x, y) = harness.actuator.taps.single()
+        assertTrue(
+            "the tap at ($x,$y) must land inside the Close button $close",
+            x in close.left..close.right && y in close.top..close.bottom,
+        )
     }
 
     // ---- Scenario 8: scroll a long list --------------------------------------------------
