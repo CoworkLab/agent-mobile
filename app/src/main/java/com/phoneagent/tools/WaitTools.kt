@@ -59,11 +59,19 @@ class WaitTools(
                 ?: return ToolResult.fail("text is required.")
             if (text.isEmpty()) return ToolResult.fail("text is required.")
 
+            // Only the upper bound is clamped. Raising a short timeout to a floor would make
+            // "give up quickly" impossible to ask for, and a caller that wants a brief wait is
+            // the common case on a screen that is either ready or not.
             val timeoutSeconds = (call.double("timeout_seconds") ?: DEFAULT_TIMEOUT)
-                .coerceIn(1.0, MAX_TIMEOUT_SECONDS)
+                .coerceIn(0.0, MAX_TIMEOUT_SECONDS)
             val deadline = System.currentTimeMillis() + (timeoutSeconds * 1000).toLong()
 
-            while (System.currentTimeMillis() < deadline) {
+            // A bound on the loop as well as the clock. A sleeper that returns without letting
+            // time pass would otherwise spin here until the process ran out of memory, which is
+            // a worse failure than the timeout this loop exists to report.
+            var polls = 0
+            while (System.currentTimeMillis() < deadline && polls < MAX_POLLS) {
+                polls++
                 val found = context.currentNodes().any { node ->
                     node.text?.contains(text, ignoreCase = true) == true ||
                         node.contentDescription?.contains(text, ignoreCase = true) == true
@@ -85,5 +93,8 @@ class WaitTools(
         const val MAX_TIMEOUT_SECONDS = 60.0
         const val DEFAULT_TIMEOUT = 10.0
         const val POLL_INTERVAL_MS = 400L
+
+        /** At 400ms a poll, this covers the longest allowed wait with room to spare. */
+        const val MAX_POLLS = 1000
     }
 }

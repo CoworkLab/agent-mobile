@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      The testbed is a debug-only harness. It deliberately has no INTERNET permission: a fake
+      bank that could reach the network is a liability, and every screen here is local.
+    -->
+    <application
+        android:allowBackup="false"
+        android:label="@string/testbed_app_name"
+        android:supportsRtl="true"
+        android:theme="@android:style/Theme.Material.Light">
+
+        <activity
+            android:name=".TestbedActivity"
+            android:exported="true"
+            android:label="@string/testbed_app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          A fake chat app that other apps can open with text already filled in. This is what
+          the deep-link scenario drives: the agent must arrive with the message typed and still
+          stop at Send.
+        -->
+        <activity
+            android:name=".ChatActivity"
+            android:exported="true"
+            android:label="Test Chat">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="testchat" />
+            </intent-filter>
+        </activity>
+
+        <!--
+          A fake bank whose package is on the denylist. It exists so the refusal path is tested
+          against a real installed app rather than a name in a list.
+        -->
+        <activity
+            android:name=".BankActivity"
+            android:exported="true"
+            android:label="Test Bank"
+            android:taskAffinity="com.phoneagent.testbed.bank" />
+
+        <!-- The custom-drawn editor: no accessibility nodes, so a tree-only agent must fail. -->
+        <activity
+            android:name=".EditorActivity"
+            android:exported="true"
+            android:label="Test Editor" />
+
+        <!-- A screen that blocks capture, standing in for a banking or DRM screen. -->
+        <activity
+            android:name=".SecureActivity"
+            android:exported="true"
+            android:label="Test Secure" />
+
+
+        <activity android:name=".FormActivity" android:exported="true" android:label="Test Form" />
+        <activity android:name=".InterferingFormActivity" android:exported="true" android:label="Test Form (changing)" />
+        <activity android:name=".PopupActivity" android:exported="true" android:label="Test Popup" />
+        <activity android:name=".PermissionDemoActivity" android:exported="true" android:label="Test Permission" />
+        <activity android:name=".KeyboardActivity" android:exported="true" android:label="Test Keyboard" />
+        <activity android:name=".SlowLoadActivity" android:exported="true" android:label="Test Slow Load" />
+        <activity android:name=".StuckActivity" android:exported="true" android:label="Test Stuck" />
+        <activity android:name=".InjectionActivity" android:exported="true" android:label="Test Injection" />
+        <activity android:name=".HindiActivity" android:exported="true" android:label="Test Hindi" />
+        <activity android:name=".LongListActivity" android:exported="true" android:label="Test Long List" />
+
+        <!--
+          Exposes the editor's final trim values so a test can assert on them. A test that
+          could only read the numbers off the screen would be testing the screen, not the drag.
+        -->
+        <provider
+            android:name=".EditorResultProvider"
+            android:authorities="com.phoneagent.testbed.editor"
+            android:exported="true" />
+
+    </application>
+
+</manifest>

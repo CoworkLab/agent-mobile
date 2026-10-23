@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 rootProject.name = "PhoneAgent"
 
 include(":app")
+include(":testbed")

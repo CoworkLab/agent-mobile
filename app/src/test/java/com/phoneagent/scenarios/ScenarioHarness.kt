@@ -19,7 +19,6 @@ import com.phoneagent.perception.ScreenSnapshot
 import com.phoneagent.perception.SnapshotFailure
 import com.phoneagent.perception.UiNode
 import com.phoneagent.safety.InjectionDetector
-import com.phoneagent.safety.KeywordSets
 import com.phoneagent.safety.PackageDenylist
 import com.phoneagent.safety.RiskClassifier
 import com.phoneagent.safety.SafetyConfigLoader
@@ -65,6 +64,13 @@ class ScenarioHarness(
     val actuator = FakeActuator()
 
     val gate = RecordingGate(ScriptedToolContext(perception, actuator))
+
+    /** The shipped detector, so a scenario can assert on what it flags. */
+    val injectionDetector = InjectionDetector(
+        SafetyConfigLoader.parseKeywords(
+            java.io.File("src/main/assets/safety_keywords.json").readText(),
+        ),
+    )
     val registry = suppliedRegistry ?: ToolRegistry(logger, tools)
     val guard: SafetyGuard
     val engine: StepEngine
@@ -89,7 +95,7 @@ class ScenarioHarness(
             logger = logger,
             systemPrompt = "You are PhoneAgent.",
             limits = limits,
-            injectionDetector = InjectionDetector(KeywordSets.EMPTY),
+            injectionDetector = injectionDetector,
             skills = skills,
         )
     }
@@ -180,8 +186,11 @@ class ScriptedToolContext(
 
 /** A screen whose content the scenario decides. */
 class ScriptedPerception : PerceptionSource {
-    var snapshot: ScreenSnapshot =
-        ScenarioHarness.snapshotOf("start", "com.example.app", emptyList())
+    // A readable default. An empty snapshot is "unusable" by design, so a test that forgets to
+    // set a screen would otherwise have every step return early and assert nothing.
+    var snapshot: ScreenSnapshot = ScenarioHarness.snapshotOf(
+        "start", "com.example.app", listOf(ScenarioHarness.button("Search")),
+    )
 
     /** How many captures fail with a blank screen before the real one is returned. */
     var failures = 0
@@ -242,6 +251,14 @@ class ScriptedModel(
 
     override suspend fun chat(request: LlmRequest): LlmResponse {
         requests += request
+
+        // The orchestrator asks for a plan before the first step, and that is a real model
+        // call. Answering it from the queue would shift every scripted reply by one, so it is
+        // answered here and the queue is left for the actions the scenario actually cares about.
+        if (request.messages.lastOrNull()?.text?.contains("Write a short plan") == true) {
+            return LlmResponse(text = "1. Look at the screen\n2. Do the thing\n3. Check it worked")
+        }
+
         val reply = if (replies.size > 1) replies.removeAt(0) else replies.firstOrNull()
         return reply?.invoke() ?: LlmResponse(text = "{}")
     }

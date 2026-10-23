@@ -117,12 +117,15 @@ object SelfTest {
                 facts.networkAvailable,
                 "Connect to Wi-Fi or mobile data. PhoneAgent cannot think offline.",
             ),
+
+            // Essential whenever it was tested and failed: nothing works without a reachable
+            // model. It is placed before the optional checks for that reason.
             check(
-                SelfTestCheck.Id.SCREEN_CAPTURE,
-                "Permission to take a screenshot",
-                facts.screenCaptureGranted,
-                "Grant screen capture, or set PhoneAgent to read the screen as text only.",
-                essential = false,
+                SelfTestCheck.Id.MODEL_REACHABLE,
+                "The model answered",
+                facts.modelReachable != false,
+                "The model could not be reached. Check the key and the connection.",
+                essential = facts.modelReachable != null,
             ),
             check(
                 SelfTestCheck.Id.NOTIFICATION_LISTENER,
@@ -152,12 +155,15 @@ object SelfTest {
                 "Optional. Needed only for the in-app updater.",
                 essential = false,
             ),
+            // Optional, and listed after every essential check: the report's "first thing to
+            // fix" is the first failed essential check, so an optional one in the middle would
+            // make that answer wrong. It is still worth reading, so it stays on the list.
             check(
-                SelfTestCheck.Id.MODEL_REACHABLE,
-                "The model answered",
-                facts.modelReachable != false,
-                "The model could not be reached. Check the key and the connection.",
-                essential = facts.modelReachable != null,
+                SelfTestCheck.Id.SCREEN_CAPTURE,
+                "Permission to take a screenshot",
+                facts.screenCaptureGranted,
+                "Grant screen capture, or set PhoneAgent to read the screen as text only.",
+                essential = false,
             ),
         ),
     )
