@@ -624,7 +624,7 @@ class RequiredScenariosTest {
         harness.screen("home", "com.example.launcher", listOf(ScenarioHarness.button("Search", mark = 1)))
         harness.model.willReplyWithTool(
             "launch_intent",
-            """{"action":"android.intent.action.VIEW","uri":"phoneagent://chat?text=hello"}""",
+            """{"action":"android.intent.action.VIEW","uri":"testchat://compose?text=hello"}""",
         )
 
         harness.orchestrator.step("Open the chat with a prefilled message", 0)
@@ -646,14 +646,16 @@ class RequiredScenariosTest {
                 ScenarioHarness.field("Email", mark = 2),
             ),
         )
-        // A popup appears after the first action. The batch re-reads the screen between
-        // actions, so this is what the model failing to predict a popup looks like.
+        val batch = harness.registry.get("batch_actions")!!
+
+        // The batch refreshes the screen at the top of execute() before validating, so the
+        // popup has to be in place before the call: this is a screen that moved between the
+        // decision and the action. The marks in the batch no longer exist, so it must refuse
+        // rather than type into whatever is now at mark 1.
         harness.perception.next = ScenarioHarness.snapshotOf(
             "popup", "com.example.app",
             listOf(ScenarioHarness.button("Allow notifications", mark = 1)),
         )
-        val batch = harness.registry.get("batch_actions")!!
-
         val result = batch.execute(
             ToolCall(
                 name = "batch_actions",
@@ -667,10 +669,13 @@ class RequiredScenariosTest {
             harness.gate.contextFor(harness.perception.snapshot),
         )
 
-        assertFalse("the batch must stop rather than act on the new screen: ${result.message}", result.success)
+        assertFalse(
+            "a batch whose marks no longer exist must be refused: ${result.message}",
+            result.success,
+        )
         assertTrue(
-            "the second action must not have run against the popup: ${harness.actuator.fieldText}",
-            harness.actuator.fieldText.size == 1,
+            "nothing may have run against the new screen: ${harness.actuator.fieldText}",
+            harness.actuator.fieldText.isEmpty(),
         )
     }
 
@@ -694,7 +699,6 @@ class RequiredScenariosTest {
             mapOf("action" to "android.intent.action.CALL", "uri" to "tel:+911234567890"),
             mapOf("action" to "android.intent.action.UNINSTALL_PACKAGE", "uri" to "package:com.x"),
             mapOf("action" to "android.intent.action.VIEW", "uri" to "upi://pay?pa=someone"),
-            mapOf("action" to "android.intent.action.VIEW", "uri" to "https://x", "package" to "com.example.bank"),
             mapOf("action" to "com.example.NOT_A_REAL_ACTION", "uri" to "https://x"),
         )
 
@@ -702,6 +706,36 @@ class RequiredScenariosTest {
             val result = tool.execute(ToolCall("launch_intent", args), context)
             assertFalse("$args must be refused: ${result.message}", result.success)
         }
+        assertTrue("nothing may have been started", launcher.started.isEmpty())
+    }
+
+    @Test
+    fun `scenario 21 a link that resolves to a denylisted package is refused`() = runBlocking {
+        val logger = Logger()
+        val deny = PackageDenylist(listOf("com.example.bank"))
+        val guard = SafetyGuard(RiskClassifier(keywords(), deny), deny)
+        // This launcher reports the bank as the handler, which is how a denylisted package is
+        // reached in practice: the link resolves to it rather than naming it.
+        val launcher = ScenarioTools.ScriptedIntentLauncher(handled = "com.example.bank")
+        val registry = ScenarioTools.standard(
+            guard, logger, policy = ScenarioTools.shippedPolicy(), intentLauncher = launcher,
+        )
+
+        val result = registry.get("launch_intent")!!.execute(
+            ToolCall(
+                "launch_intent",
+                mapOf("action" to "android.intent.action.VIEW", "uri" to "https://x"),
+            ),
+            ScenarioHarness().gate.contextFor(
+                ScenarioHarness.snapshotOf("s", "com.example.app", listOf(ScenarioHarness.button("x"))),
+            ),
+        )
+
+        assertFalse("a bank link must be refused: ${result.message}", result.success)
+        assertTrue(
+            "the refusal must name the restriction: ${result.message}",
+            result.message.contains("does not act inside"),
+        )
         assertTrue("nothing may have been started", launcher.started.isEmpty())
     }
 
