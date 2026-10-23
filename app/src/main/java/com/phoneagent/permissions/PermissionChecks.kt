@@ -1,9 +1,12 @@
 package com.phoneagent.permissions
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import android.os.Build
 import android.provider.Settings
@@ -16,6 +19,7 @@ enum class PermissionId {
     NOTIFICATION_LISTENER,
     BATTERY_OPTIMIZATION,
     INSTALL_PACKAGES,
+    MICROPHONE,
 }
 
 data class PermissionStatus(
@@ -99,6 +103,11 @@ object PermissionChecks {
             pm.isIgnoringBatteryOptimizations(context.packageName)
         }.getOrDefault(false)
 
+    /** True when the microphone permission has been granted. */
+    fun isMicrophoneGranted(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+
     fun canInstallPackages(context: Context): Boolean =
         runCatching { context.packageManager.canRequestPackageInstalls() }.getOrDefault(false)
 
@@ -138,6 +147,12 @@ object PermissionChecks {
             granted = canInstallPackages(context),
             title = "Install updates",
             why = "Needed only for the in-app updater. You still tap Install yourself.",
+        ),
+        PermissionStatus(
+            id = PermissionId.MICROPHONE,
+            granted = isMicrophoneGranted(context),
+            title = "Microphone",
+            why = "Only needed if you want to talk to PhoneAgent instead of typing.",
         ),
     )
 
@@ -180,6 +195,15 @@ object PermissionChecks {
         PermissionId.INSTALL_PACKAGES ->
             Intent(
                 Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                "package:${context.packageName}".toUri(),
+            )
+
+        // A runtime permission rather than a settings screen, so this opens the app's own
+        // permission page. The actual request is made from the screen that needs the
+        // microphone, which is the only place the system dialog can appear.
+        PermissionId.MICROPHONE ->
+            Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                 "package:${context.packageName}".toUri(),
             )
     }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

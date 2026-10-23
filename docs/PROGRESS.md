@@ -16,7 +16,7 @@ Session: M9 (settings, voice, and the toolchain restore).
 | M6 Orchestrator | TODO | |
 | M7 Safety | TODO | |
 | M8 Memory + skills | TODO | |
-| M9 Voice, UX, settings, self-test, updater | IN PROGRESS | Settings and voice done; screens and self-test next. |
+| M9 Voice, UX, settings, self-test, updater | DONE | Settings, voice, history, memory, skills, self-test screens; version check and APK verification. |
 | M10 Testbed + 23 scenarios + fixtures | TODO | |
 | M11 LLM-in-the-loop tuning + hardening | TODO | |
 | M12 Signing, release, v1.0.0 | TODO | |

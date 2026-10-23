@@ -160,6 +160,22 @@ class SkillLibrary(initial: List<Skill> = emptyList()) {
     fun get(id: String): Skill? = skills[id]
 
     /**
+     * Approves a draft so it can be used.
+     *
+     * The status change is the whole point of the draft flow: a skill that was suggested by the
+     * model is a suggestion until a person says otherwise, and this is the only thing that
+     * changes that.
+     */
+    fun approve(id: String) {
+        skills[id]?.let { skills[id] = it.copy(status = SkillStatus.APPROVED) }
+    }
+
+    /** Deletes a skill, whether it is a draft or in use. */
+    fun delete(id: String) {
+        skills.remove(id)
+    }
+
+    /**
      * The index that goes into the prompt.
      *
      * Only the name, the description and the apps, never the body. This is the whole point of
