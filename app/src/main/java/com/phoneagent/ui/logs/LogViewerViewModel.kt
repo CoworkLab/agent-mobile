@@ -60,7 +60,9 @@ class LogViewerViewModel(
     fun clear() {
         logger.clear()
         fileSink.clear()
-        logger.i(TAG, "Logs cleared")
+        // Nothing is logged here on purpose. Writing a "Logs cleared" line straight after
+        // clearing leaves the screen showing that one entry, so the empty state a person
+        // expects after tapping Clear is never reachable.
     }
 
     fun exportText(): String = buildString {

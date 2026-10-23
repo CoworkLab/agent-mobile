@@ -101,10 +101,15 @@ fun OnboardingScreen(
                 Button(
                     onClick = onDone,
                     enabled = state.allCoreGranted,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(if (state.allCoreGranted) "Start using PhoneAgent" else "Turn on the top 3")
                 }
+                // Always available. Setup is shown over the whole app, so without a way past
+                // it a permission the phone will not grant — a locked-down work profile, say —
+                // leaves the user stuck on a screen they cannot leave. Everything here can be
+                // revisited from the Check tab, which lists the same permissions and fixes.
+                TextButton(onClick = onDone) { Text("Not now") }
             }
         }
     }

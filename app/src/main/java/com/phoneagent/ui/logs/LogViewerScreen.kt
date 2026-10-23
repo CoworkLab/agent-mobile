@@ -1,6 +1,8 @@
 package com.phoneagent.ui.logs
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -178,11 +180,16 @@ private fun CrashCard(crash: String, onDismiss: () -> Unit) {
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LevelFilterRow(selected: LogLevel, onSelect: (LogLevel) -> Unit) {
-    Row(
+    // Wrapping, not a single row. Five chips need about 334dp and a small phone gives 320dp,
+    // so the last one — ERROR, the one that matters most — was pushed off the edge and could
+    // not be tapped at all. A flow lays them out in as many lines as they need.
+    FlowRow(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         LogLevel.entries.forEach { level ->
             FilterChip(
