@@ -81,6 +81,34 @@ See `docs/ARCHITECTURE.md` for the full design.
 
 Full detail in `docs/TEST_STRATEGY.md`.
 
+### Making the accessibility service survive an instrumented run
+
+The device tests need the accessibility service, and three separate things stop it. All three
+have been hit in CI, and each one looks identical from the outside — the component sits in
+`Enabled services`, `Bound services` is empty, and the tests that need it fail or skip.
+
+1. **Order in device setup.** A package that is not installed yet cannot be enabled, and a
+   package in the stopped state has its services left unbound. `scripts/prepare-device.sh`
+   installs, starts the app, then enables — in that order.
+2. **UiAutomation suppresses every other accessibility service** while a connection is held.
+   `FLAG_DONT_SUPPRESS_ACCESSIBILITY_SERVICES` opts out, but it has to be added to *every*
+   connection: the instance is cached with the flags it was built with, so one unflagged
+   `getUiAutomation()` replaces the flagged one. `PhoneAgentTestRunner` overrides both entry
+   points and adds the flag, which is what Appium's UiAutomator2 server does.
+3. **Starting the instrumentation force-stops the target app**, killing the process the service
+   is bound to. The system then lists it under `Crashed services` and will not bind it again,
+   whatever the setting says. So device setup disables the service once it has confirmed it
+   binds, and the tests enable it into the process they are already running in.
+
+Two consequences worth remembering:
+
+- A skip reports as green. `ServiceRequirement` fails, rather than skips, when the run passes
+  `requireAccessibility=true`; the E2E and eval jobs do. Nineteen of thirty tests once "passed"
+  by not running.
+- Collect logs inside the emulator session. Steps after the emulator action find the device
+  already torn down: `adb` reports "no devices/emulators found" and the artifacts come out
+  empty. `scripts/run-device-tests.sh` collects before returning.
+
 ## 6. Toolchain (verified — see `docs/RESEARCH.md`)
 
 - JDK 17 (CI) / JDK 21 (sandbox), Gradle 8.14.6, AGP 8.13.2, Kotlin 2.2.21
