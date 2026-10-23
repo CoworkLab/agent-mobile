@@ -12,13 +12,13 @@ import com.phoneagent.safety.RiskLevel
 import com.phoneagent.safety.RiskTarget
 import com.phoneagent.safety.SafetyConfigLoader
 import com.phoneagent.service.PhoneAgentAccessibilityService
+import com.phoneagent.testing.ServiceRequirement
 import com.phoneagent.util.Logger
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
@@ -36,12 +36,7 @@ class ToolsInstrumentedTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
     private val logger = Logger()
 
-    private fun requireService() {
-        assumeTrue(
-            "Accessibility service not enabled; see e2e-emulator.yml",
-            PhoneAgentAccessibilityService.isRunning(),
-        )
-    }
+    private fun requireService() = ServiceRequirement.requireRunning()
 
     private fun actuator() = AndroidActuator(logger)
 

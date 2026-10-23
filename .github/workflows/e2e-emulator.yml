@@ -67,30 +67,13 @@ jobs:
           script: |
             set -x
 
-            # Install before touching settings. Enabling the accessibility service for a
-            # package that is not installed yet is silently dropped, so the order matters.
-            # The testbed app is what the device-level scenarios drive. It is installed here
-            # rather than from the Play store because it exists only for these tests.
-            ./gradlew installDebug installDebugAndroidTest :testbed:installDebug --stacktrace
+            # Device setup lives in a script so it can be run the same way by hand. The runner
+            # executes each line separately, which is why this is one line and not a sequence
+            # of adb calls: it also means the ordering and the bound-service check inside the
+            # script cannot be silently skipped.
+            bash scripts/prepare-device.sh
 
-            # Each command goes on one line. The emulator runner executes the script a line
-            # at a time, so a backslash continuation is not joined: the first half runs with a
-            # missing argument and the job fails before any test starts. That is what made the
-            # last runs red while `connectedDebugAndroidTest` never actually ran.
-            adb shell pm grant com.phoneagent.debug android.permission.POST_NOTIFICATIONS || true
-            adb shell appops set com.phoneagent.debug SYSTEM_ALERT_WINDOW allow || true
-            adb shell cmd notification allow_listener com.phoneagent.debug/com.phoneagent.service.PhoneAgentNotificationListener || true
-
-            # Write the accessibility settings last, then read them back: if the service
-            # component is wrong the tests skip, and a wrong name here is the usual cause.
-            adb shell settings put secure enabled_accessibility_services com.phoneagent.debug/com.phoneagent.service.PhoneAgentAccessibilityService
-            adb shell settings put secure accessibility_enabled 1
-
-            adb shell settings get secure enabled_accessibility_services
-            adb shell settings get secure accessibility_enabled
-            adb shell dumpsys accessibility | head -40
-
-            ./gradlew connectedDebugAndroidTest --stacktrace
+            ./gradlew connectedDebugAndroidTest --stacktrace -Pandroid.testInstrumentationRunnerArguments.requireAccessibility=true
 
       - name: Collect logcat
         if: always()

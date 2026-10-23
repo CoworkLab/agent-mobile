@@ -6,7 +6,7 @@ import com.phoneagent.agent.ConfirmationGate
 import com.phoneagent.perception.AndroidPerceptionSource
 import com.phoneagent.perception.PerceptionMode
 import com.phoneagent.perception.ScreenSnapshot
-import com.phoneagent.service.PhoneAgentAccessibilityService
+import com.phoneagent.testing.ServiceRequirement
 import com.phoneagent.tools.AndroidActuator
 import com.phoneagent.tools.AndroidDeviceInfo
 import com.phoneagent.tools.AndroidIntentLauncher
@@ -81,10 +81,7 @@ class EvalInstrumentedTest {
 
     @Test
     fun `the eval suite runs against the real model`() = runBlocking {
-        assumeTrue(
-            "Accessibility service not enabled; the eval needs a real screen",
-            PhoneAgentAccessibilityService.get() != null && PhoneAgentAccessibilityService.isRunning(),
-        )
+        ServiceRequirement.requireRunning()
         val key = apiKey()
         assumeTrue("EVAL_API_KEY is not set; skipping the LLM evaluation", key != null)
 

@@ -11,7 +11,7 @@ import com.phoneagent.perception.ScreenSnapshot
 import com.phoneagent.perception.SnapshotFailure
 import com.phoneagent.safety.InjectionDetector
 import com.phoneagent.safety.SafetyConfigLoader
-import com.phoneagent.service.PhoneAgentAccessibilityService
+import com.phoneagent.testing.ServiceRequirement
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -44,16 +44,7 @@ class TestbedInstrumentedTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     @Before
-    fun requireService() {
-        assumeTrue(
-            "Accessibility service not enabled; see e2e-emulator.yml",
-            PhoneAgentAccessibilityService.get() != null,
-        )
-        assumeTrue(
-            "Accessibility service not connected",
-            PhoneAgentAccessibilityService.isRunning(),
-        )
-    }
+    fun requireService() = ServiceRequirement.requireRunning()
 
     /** Skips rather than fails when the testbed is not installed. */
     private fun requireTestbed() {

@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.phoneagent.service.PhoneAgentAccessibilityService
+import com.phoneagent.testing.ServiceRequirement
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -26,10 +27,8 @@ class PerceptionInstrumentedTest {
     private val context get() = InstrumentationRegistry.getInstrumentation().targetContext
 
     private fun requireService(): AccessibilityService {
-        val service = PhoneAgentAccessibilityService.get()
-        assumeTrue("Accessibility service not enabled; see e2e-emulator.yml", service != null)
-        assumeTrue("Accessibility service not connected", PhoneAgentAccessibilityService.isRunning())
-        return service!!
+        ServiceRequirement.requireRunning()
+        return PhoneAgentAccessibilityService.get()!!
     }
 
     @Test
