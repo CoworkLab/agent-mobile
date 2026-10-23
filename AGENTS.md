@@ -93,6 +93,38 @@ Full detail in `docs/TEST_STRATEGY.md`.
 - Emulator CI: `reactivecircus/android-emulator-runner@v2`, API 34 + API 30, `x86_64`,
   `google_apis`, KVM via udev rules
 
+### 6.1 Toolchain restore (after a container reset)
+
+The sandbox is ephemeral. If `java`, `sdkmanager` or `/tmp/env.sh` are missing, the project
+files and git history are still intact; only the toolchain needs rebuilding:
+
+```bash
+sudo apt-get update && sudo apt-get install -y openjdk-21-jdk-headless unzip
+sudo mkdir -p /opt/android-sdk/cmdline-tools && sudo chown -R "$USER" /opt/android-sdk
+cd /tmp && curl -sL -o cmdline.zip \
+  https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+unzip -q -o cmdline.zip -d /tmp/cmdline
+# sdkmanager only finds itself under cmdline-tools/latest/, so the layout matters.
+sudo mv /tmp/cmdline/cmdline-tools /opt/android-sdk/cmdline-tools/latest
+/opt/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/opt/android-sdk --licenses
+/opt/android-sdk/cmdline-tools/latest/bin/sdkmanager --sdk_root=/opt/android-sdk \
+  --install "platforms;android-36" "build-tools;36.0.0" "platform-tools"
+```
+
+Then write `/tmp/env.sh` and `local.properties`:
+
+```bash
+cat > /tmp/env.sh <<'EOS'
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+export ANDROID_SDK_ROOT=/opt/android-sdk
+export ANDROID_HOME=/opt/android-sdk
+export PATH="$JAVA_HOME/bin:$ANDROID_SDK_ROOT/platform-tools:$PATH"
+EOS
+echo 'sdk.dir=/opt/android-sdk' > local.properties
+```
+
+`local.properties` is git-ignored, so it is expected to be missing after a reset.
+
 ## 7. Release and updates
 
 - One release keystore, generated once, stored as GitHub Secrets and as an
