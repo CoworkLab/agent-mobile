@@ -98,6 +98,30 @@ versioning.
   `InjectionDetector`.
 - 78 new unit tests (215 total) and instrumented tests over the real assets and actuator.
 
+### Added (M10)
+- The testbed app (`testbed/`, `com.phoneagent.testbed`): chat, form, custom-drawn editor,
+  `FLAG_SECURE` screen, fake bank, popup, permission demo, keyboard, slow load, stuck button,
+  injection page, Hindi field and long list. Debug-only, no INTERNET permission.
+- Automated tests for all 23 required scenarios, run against the shipped assets.
+- `ScenarioHarness` and `ScenarioTools`: the real orchestrator and the real tools, driven by a
+  scripted model, screen and actuator on the JVM.
+- Record/replay fixtures (`RecordedRun`, `ReplayFixtureTest`) that re-run a real trajectory
+  with no model and no network, plus the first fixture `open-settings-toggle.json`.
+- `TestbedInstrumentedTest`: the device-level scenarios (custom-drawn canvas, secure window,
+  injection page, Devanagari, a dead button, a deep link that arrives pre-filled).
+- `e2e-emulator.yml` now installs `:testbed:installDebug`.
+
+### Fixed (M10)
+- `WaitForTool` could spin forever when a sleeper returned without advancing the clock; its
+  poll loop is now bounded by a count as well as the clock.
+- The self-test ran optional checks before essential ones, so an essential failure could be
+  hidden; essentials now run first.
+- Injected on-screen text was adopted as the user's goal instead of being treated as data.
+- `ScenarioHarness` defaulted to an empty screen, which made every step return early and the
+  tests assert nothing; it now starts from a readable screen.
+- `ScriptedToolContext.refreshScreen()` bypassed the capture hook, so a tool that re-read the
+  screen never saw a swapped screen and a class of test could not fail.
+
 ### Added (M3)
 - Perception: `ScreenSnapshot`, `UiNode`, `Bounds`, `TreeShaper`, `SnapshotSerializer`,
   `MarkRenderer`, `AndroidPerceptionSource`.
