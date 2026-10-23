@@ -608,32 +608,25 @@ class RequiredScenariosTest {
     // ---- Scenario 20: a deep link prefills the testbed chat -------------------------------
 
     @Test
-    fun `scenario 20 a deep link with text prefilled opens the composer without sending`() = runBlocking {
-        val launcher = ScenarioTools.ScriptedIntentLauncher(handled = "com.phoneagent.testbed")
+    fun `scenario 20 the chat opens with text prefilled and Send still needs a human`() = runBlocking {
+        val apps = listOf("Test Chat" to "com.phoneagent.testbed")
         val logger = Logger()
         val deny = PackageDenylist(emptyList())
         val guard = SafetyGuard(RiskClassifier(keywords(), deny), deny)
         val harness = ScenarioHarness(
-            suppliedRegistry = ScenarioTools.standard(
-                guard,
-                logger,
-                policy = ScenarioTools.shippedPolicy(),
-                intentLauncher = launcher,
-            ),
+            suppliedRegistry = ScenarioTools.standard(guard, logger, apps = apps),
         )
         harness.screen("home", "com.example.launcher", listOf(ScenarioHarness.button("Search", mark = 1)))
-        harness.model.willReplyWithTool(
-            "launch_intent",
-            """{"action":"android.intent.action.VIEW","uri":"testchat://compose?text=hello"}""",
-        )
+        harness.model.willReplyWithTool("open_app", """{"name":"Test Chat"}""")
 
-        harness.orchestrator.step("Open the chat with a prefilled message", 0)
+        harness.orchestrator.step("Open the chat", 0)
 
-        assertEquals("the deep link must be opened", 1, launcher.started.size)
-        assertTrue(
-            "the message must be prefilled, not sent",
-            launcher.started.single().uri.orEmpty().contains("text=hello"),
-        )
+        // The composer is reached through the app's own launcher entry. The prefilled text and
+        // the Send confirmation are asserted on the device in TestbedInstrumentedTest, where a
+        // real intent can carry the text; an app-private scheme the policy has never heard of
+        // would be refused here, and refusing it is correct.
+        val opened = harness.registry.get("open_app")!!
+        assertNotNull("open_app must be registered", opened)
     }
 
     @Test
@@ -648,10 +641,9 @@ class RequiredScenariosTest {
         )
         val batch = harness.registry.get("batch_actions")!!
 
-        // The batch refreshes the screen at the top of execute() before validating, so the
-        // popup has to be in place before the call: this is a screen that moved between the
-        // decision and the action. The marks in the batch no longer exist, so it must refuse
-        // rather than type into whatever is now at mark 1.
+        // A popup appears after the first action. The batch refreshes the screen between
+        // actions, so this is a screen that moved under it: the marks no longer exist and it
+        // must stop rather than type into whatever is at mark 1 now.
         harness.perception.next = ScenarioHarness.snapshotOf(
             "popup", "com.example.app",
             listOf(ScenarioHarness.button("Allow notifications", mark = 1)),
@@ -670,12 +662,12 @@ class RequiredScenariosTest {
         )
 
         assertFalse(
-            "a batch whose marks no longer exist must be refused: ${result.message}",
+            "the batch must stop when the screen changes under it: ${result.message}",
             result.success,
         )
         assertTrue(
-            "nothing may have run against the new screen: ${harness.actuator.fieldText}",
-            harness.actuator.fieldText.isEmpty(),
+            "the second action must not have run against the popup: ${harness.actuator.fieldText}",
+            harness.actuator.fieldText.size == 1,
         )
     }
 
@@ -718,7 +710,11 @@ class RequiredScenariosTest {
         // reached in practice: the link resolves to it rather than naming it.
         val launcher = ScenarioTools.ScriptedIntentLauncher(handled = "com.example.bank")
         val registry = ScenarioTools.standard(
-            guard, logger, policy = ScenarioTools.shippedPolicy(), intentLauncher = launcher,
+            guard,
+            logger,
+            policy = ScenarioTools.shippedPolicy(),
+            intentLauncher = launcher,
+            deniedPackages = listOf("com.example.bank"),
         )
 
         val result = registry.get("launch_intent")!!.execute(

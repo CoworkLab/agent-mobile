@@ -181,7 +181,16 @@ class ScriptedToolContext(
 ) : ToolContext {
     override fun currentNodes(): List<UiNode> = perception.snapshot.nodes
     override fun currentPackageName(): String? = perception.snapshot.packageName
-    override suspend fun refreshScreen(): ScreenSnapshot = perception.snapshot
+
+    /**
+     * Goes through [ScriptedPerception.capture] rather than reading the field.
+     *
+     * A tool that refreshes the screen — the batch validator does, twice per action — must see
+     * a screen the scenario swapped in. Reading the field directly would quietly ignore the
+     * swap, so a test of "the screen changed under the batch" could never fail.
+     */
+    override suspend fun refreshScreen(): ScreenSnapshot =
+        perception.capture(PerceptionMode.TREE_ONLY)
 }
 
 /** A screen whose content the scenario decides. */

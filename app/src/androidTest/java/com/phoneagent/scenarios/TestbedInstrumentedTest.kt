@@ -101,6 +101,34 @@ class TestbedInstrumentedTest {
     }
 
     @Test
+    fun `the deep link arrives with the message already typed`() {
+        requireTestbed()
+
+        // The one thing the JVM harness cannot model: an intent that carries data into the
+        // screen. The composer must arrive with the text filled in and the Send button still
+        // present and un-pressed. Reaching the screen is not permission to send.
+        device.executeShellCommand(
+            "am start -a android.intent.action.VIEW " +
+                "-d 'testchat://compose?to=123&text=meeting%20at%206' " +
+                "-n $testbedPackage/.ChatActivity",
+        )
+        device.wait(Until.hasObject(By.pkg(testbedPackage)), 10_000)
+
+        val snapshot = capture()
+        val text = textOf(snapshot)
+
+        assertTrue("the chat must be readable", snapshot.isUsable)
+        assertTrue(
+            "the prefilled message must be on screen, not just the empty field: $text",
+            text.contains("meeting at 6"),
+        )
+        assertTrue(
+            "Send must still be there and untouched: $text",
+            text.contains("Send", ignoreCase = true),
+        )
+    }
+
+    @Test
     fun `the form exposes three fields and a Submit button`() {
         openScreen("FormActivity")
 
