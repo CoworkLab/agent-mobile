@@ -69,24 +69,32 @@ class AndroidPerceptionSource(
             when (capture) {
                 is ScreenshotResult.Ok -> {
                     val bitmap = capture.bitmap
-                    val withMarks = if (effectiveMode == PerceptionMode.TREE_PLUS_SCREENSHOT) {
-                        val scaleX = bitmap.width.toFloat() / screenBounds.width.coerceAtLeast(1)
-                        val scaleY = bitmap.height.toFloat() / screenBounds.height.coerceAtLeast(1)
-                        MarkRenderer.drawMarks(bitmap, marked, scaleX, scaleY)
-                    } else {
-                        bitmap
-                    }
 
-                    if (MarkRenderer.looksBlank(withMarks)) {
+                    // Blankness is judged on the raw capture, before the marks are drawn on it.
+                    // A secure window is redacted by the platform rather than refused: the
+                    // capture comes back as a flat black frame with no error code, and this check
+                    // is what turns that into a named failure. Testing the marked bitmap instead
+                    // would paint red boxes and labels over the black and make it look like a
+                    // perfectly good screenshot — the agent would then be told it could see a
+                    // screen it cannot, and would tap at coordinates that mean nothing.
+                    if (MarkRenderer.looksBlank(bitmap)) {
                         failure = SnapshotFailure.BLANK_CAPTURE
+                        bitmap.recycle()
                     } else {
+                        val withMarks = if (effectiveMode == PerceptionMode.TREE_PLUS_SCREENSHOT) {
+                            val scaleX = bitmap.width.toFloat() / screenBounds.width.coerceAtLeast(1)
+                            val scaleY = bitmap.height.toFloat() / screenBounds.height.coerceAtLeast(1)
+                            MarkRenderer.drawMarks(bitmap, marked, scaleX, scaleY)
+                        } else {
+                            bitmap
+                        }
                         val (bytes, size) = MarkRenderer.downscaleAndEncode(withMarks)
                         jpeg = bytes
                         width = size.first
                         height = size.second
                         lastScreenshotAtMs = System.currentTimeMillis()
+                        withMarks.recycle()
                     }
-                    withMarks.recycle()
                 }
 
                 is ScreenshotResult.Secure -> failure = SnapshotFailure.SECURE_SCREEN
