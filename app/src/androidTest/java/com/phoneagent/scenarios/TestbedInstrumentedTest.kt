@@ -77,11 +77,13 @@ class TestbedInstrumentedTest {
         device.waitForIdle()
     }
 
-    private fun capture(): ScreenSnapshot = runBlocking {
+    private fun capture(
+        mode: PerceptionMode = PerceptionMode.TREE_ONLY,
+    ): ScreenSnapshot = runBlocking {
         val source = AndroidPerceptionSource()
         val cooldown = source.screenshotCooldownMs()
         if (cooldown > 0) kotlinx.coroutines.delay(cooldown)
-        source.capture(PerceptionMode.TREE_ONLY)
+        source.capture(mode)
     }
 
     private fun textOf(snapshot: ScreenSnapshot): String =
@@ -205,7 +207,10 @@ class TestbedInstrumentedTest {
     fun `the secure screen reports a failure rather than an empty success`() {
         openScreen("SecureActivity")
 
-        val snapshot = capture()
+        // Captured with the screenshot included, because that is the path FLAG_SECURE blocks:
+        // a tree-only read still returns the window's nodes, so it cannot tell a secure screen
+        // from an ordinary one. This is the stronger of the two reads, not a weaker one.
+        val snapshot = capture(PerceptionMode.TREE_PLUS_SCREENSHOT)
 
         // FLAG_SECURE blocks the capture. The honest outcome is a named failure; an empty tree
         // with no failure would let the agent tap at nothing and call it progress.

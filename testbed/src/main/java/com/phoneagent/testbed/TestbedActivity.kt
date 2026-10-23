@@ -82,6 +82,10 @@ internal fun Activity.show(body: View) {
 internal fun Activity.button(label: String, onClick: () -> Unit = {}): Button =
     Button(this).apply {
         text = label
+        // The platform uppercases button labels by default, and that reaches the accessibility
+        // tree: a scenario looking for "Target item 47" saw "TARGET ITEM 47". A scenario that
+        // names something should find that name, so the label keeps the case it was written in.
+        isAllCaps = false
         setOnClickListener { onClick() }
     }
 

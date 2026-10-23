@@ -66,7 +66,11 @@ jobs:
         env:
           # Passed to the instrumentation as an argument rather than read from the app's own
           # settings, so the eval cannot touch or be confused by a real provider configuration.
-          EVAL_API_KEY: ${{ secrets.EVAL_API_KEY }}
+          #
+          # The secret is the repository's GEMINI_API_KEY. It was read as EVAL_API_KEY, which no
+          # one had ever set, so the key arrived empty, the test skipped itself and the job went
+          # green without an evaluation having run.
+          EVAL_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         with:
           api-level: 34
           target: google_apis
