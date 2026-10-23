@@ -39,12 +39,12 @@ class OnboardingScreenTest {
 
     private fun render() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        // Built here, not inside the composable: lint flags a view model constructed during
+        // composition, and the state has to survive recomposition anyway.
+        val viewModel = OnboardingViewModel(context)
         rule.setContent {
             PhoneAgentTheme {
-                OnboardingScreen(
-                    viewModel = OnboardingViewModel(context),
-                    onDone = {},
-                )
+                OnboardingScreen(viewModel = viewModel, onDone = {})
             }
         }
         rule.waitForIdle()
