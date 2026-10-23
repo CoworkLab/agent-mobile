@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Read whether there is a connection at all. The self-test reports "no internet" as a
+         plain sentence instead of letting the model call fail and look like a bug. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- Voice input. Declared but requested at the moment it is used, never at launch: a
          person who never talks to the app should never see the prompt. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
