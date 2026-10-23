@@ -71,6 +71,7 @@ class AgentOrchestrator(
      */
     private var awaitingApproval: ToolCall? = null
     private var approvalAnswer: Boolean? = null
+    private var approvalTimedOut: Boolean = false
 
     /** The plan the agent is following, for the UI. */
     val currentPlan: AgentPlan get() = plan
@@ -86,6 +87,7 @@ class AgentOrchestrator(
         prepared = false
         awaitingApproval = null
         approvalAnswer = null
+        approvalTimedOut = false
     }
 
     fun recordUserAnswer(text: String) {
@@ -95,9 +97,15 @@ class AgentOrchestrator(
     /** The call waiting for approval, for the overlay and the notification. */
     val pendingApproval: ToolCall? get() = awaitingApproval
 
-    /** Called by the UI when the person answers a confirmation. */
-    fun recordApproval(approved: Boolean) {
+    /**
+     * Called by the UI when the person answers a confirmation.
+     *
+     * [timedOut] is kept separate from a plain "no" so the audit log can tell a person who
+     * declined from a dialog nobody answered; the outcome for the loop is the same denial.
+     */
+    fun recordApproval(approved: Boolean, timedOut: Boolean = false) {
         approvalAnswer = approved
+        approvalTimedOut = timedOut
     }
 
     /**
@@ -181,9 +189,10 @@ class AgentOrchestrator(
                     call.name,
                     com.phoneagent.safety.RiskLevel.HIGH,
                     approved = false,
-                    timedOut = false,
+                    timedOut = approvalTimedOut,
                     snapshot = snapshot,
                 )
+                approvalTimedOut = false
                 val note = "The user declined the ${call.name} action. Do not repeat it. " +
                     "Try a different way, or ask what they would prefer."
                 lastResult = note
@@ -336,7 +345,12 @@ class AgentOrchestrator(
             // action; the next step runs it rather than asking the model to decide again.
             awaitingApproval = outcome.call
             lastResult = "Waiting for your approval: ${outcome.reason}"
-            StepOutcome.WaitingUser("${outcome.reason} May I go ahead?")
+            // A confirmation is the one question with a deadline: if nobody answers, the
+            // action must not run, and the loop must not sit there for the life of the app.
+            StepOutcome.WaitingUser(
+                "${outcome.reason} May I go ahead?",
+                timeoutMs = CONFIRMATION_TIMEOUT_MS,
+            )
         }
 
         is StepEngine.Outcome.Refused -> {
@@ -435,5 +449,8 @@ class AgentOrchestrator(
 
         /** Tools the loop itself answers, which may not be in the registry. */
         val LOOP_TOOLS = setOf("finish", "ask_user", "fail", "update_plan")
+
+        /** Five minutes to answer a confirmation before silence is read as "no". */
+        const val CONFIRMATION_TIMEOUT_MS = 5 * 60_000L
     }
 }

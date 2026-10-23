@@ -12,11 +12,12 @@ import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
 import androidx.core.app.NotificationManagerCompat
 import com.phoneagent.PhoneAgentApp
+import com.phoneagent.agent.AgentAssembly
 import com.phoneagent.agent.AgentController
 import com.phoneagent.agent.AgentState
 import com.phoneagent.agent.AgentStatus
-import com.phoneagent.agent.StepOutcome
 import com.phoneagent.permissions.PermissionChecks
+import com.phoneagent.settings.DataStoreSettingsRepository
 import com.phoneagent.util.LogLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,24 +39,18 @@ class AgentForegroundService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private lateinit var controller: AgentController
+    /**
+     * The loop for the current task, or null while none is running.
+     *
+     * It is built per task rather than in `onCreate`, because it reads the person's settings
+     * and the provider list; building it once would pin the first set of settings for the life
+     * of the process, so a newly added API key would not take effect until a restart.
+     */
+    private var assembly: AgentAssembly? = null
 
     override fun onCreate() {
         super.onCreate()
         AgentNotifications.createChannels(this)
-
-        controller = AgentController(
-            logger = PhoneAgentApp.logger(),
-            scope = scope,
-            stepRunner = ::placeholderStep,
-            observer = { "M2 placeholder observation" },
-        )
-        sharedController.value = controller
-
-        scope.launch {
-            controller.status.collect { status -> onStatusChanged(status) }
-        }
-
         PhoneAgentApp.safeLog(LogLevel.INFO, TAG, "Agent service created")
     }
 
@@ -64,12 +59,13 @@ class AgentForegroundService : Service() {
             ACTION_START_TASK -> {
                 promoteToForeground(getString(android.R.string.ok), "Working on your task")
                 val goal = intent.getStringExtra(EXTRA_GOAL).orEmpty()
-                if (goal.isNotBlank()) controller.start(goal)
+                if (goal.isNotBlank()) startTask(goal)
             }
 
             ACTION_STOP -> {
                 PhoneAgentApp.safeLog(LogLevel.INFO, TAG, "STOP received from notification")
-                controller.stop()
+                assembly?.controller?.stop()
+                publish(AgentStatus(state = AgentState.CANCELLED, summary = "Stopped."))
             }
 
             else -> promoteToForeground("PhoneAgent", "Ready")
@@ -82,7 +78,7 @@ class AgentForegroundService : Service() {
             context = this,
             title = title,
             text = text,
-            showStop = controller.isRunning,
+            showStop = assembly?.controller?.isRunning == true,
         )
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
@@ -143,16 +139,47 @@ class AgentForegroundService : Service() {
     }
 
     /**
-     * M2 placeholder: acknowledges the goal and finishes, so the whole start -> run -> stop
-     * path is exercisable before the brain exists.
+     * Builds the loop for [goal] and starts it.
+     *
+     * The build is asynchronous because it reads settings from disk and the provider list from
+     * the keystore-backed store. If no model is configured the task does not start; saying so
+     * is more useful than a run that cannot make a single decision.
      */
-    private suspend fun placeholderStep(
-        goal: String,
-        stepIndex: Int,
-        observation: String,
-    ): StepOutcome = StepOutcome.Done("Received your request: $goal")
+    private fun startTask(goal: String) {
+        scope.launch {
+            val settings = DataStoreSettingsRepository(this@AgentForegroundService).current()
+            val built = AgentAssembly.build(this@AgentForegroundService, settings, PhoneAgentApp.logger())
+            if (built == null) {
+                publish(
+                    AgentStatus(
+                        state = AgentState.FAILED,
+                        goal = goal,
+                        error = "No model is set up. Add one in Settings, then try again.",
+                    ),
+                )
+                return@launch
+            }
+
+            assembly?.controller?.stop()
+            assembly = built
+            sharedController.value = built.controller
+
+            launch {
+                built.controller.status.collect { status -> publish(status) }
+            }
+            built.controller.start(goal)
+        }
+    }
+
+    /** Updates the flow the UI and the notification both read. */
+    private fun publish(status: AgentStatus) {
+        _status.value = status
+        onStatusChanged(status)
+    }
 
     override fun onDestroy() {
+        assembly?.controller?.stop()
+        assembly = null
         sharedController.value = null
         scope.cancel()
         PhoneAgentApp.safeLog(LogLevel.INFO, TAG, "Agent service destroyed")

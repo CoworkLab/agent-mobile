@@ -32,8 +32,14 @@ sealed interface StepOutcome {
     /** Keep going; the loop will observe again. */
     data class Continue(val note: String = "") : StepOutcome
 
-    /** The agent needs the human. The loop pauses until [AgentController.userAnswer]. */
-    data class WaitingUser(val question: String) : StepOutcome
+    /**
+     * The agent needs the human. The loop pauses until [AgentController.userAnswer].
+     *
+     * [timeoutMs] is set only for a confirmation. A confirmation that nobody answers must not
+     * hold the task open, and silence there means no; a clarification, by contrast, may
+     * legitimately wait as long as the person needs.
+     */
+    data class WaitingUser(val question: String, val timeoutMs: Long? = null) : StepOutcome
 
     /** Task finished successfully. */
     data class Done(val summary: String) : StepOutcome

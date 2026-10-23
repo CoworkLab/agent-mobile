@@ -150,12 +150,17 @@ class TestbedInstrumentedTest {
 
         // This is the difficulty the editor exists for. If the handles were suddenly visible,
         // the tree-only path would look better than it is and the fallback would go untested.
+        //
+        // What must not appear is an *interactive* handle. The screen's own instruction text
+        // says the word "handles", and that is a plain label a person reads, not something the
+        // agent can act on; matching it would make this test fail on a correct screen.
         val handleLike = snapshot.nodes.filter {
-            it.text?.contains("handle", ignoreCase = true) == true ||
+            val named = it.text?.contains("handle", ignoreCase = true) == true ||
                 it.contentDescription?.contains("handle", ignoreCase = true) == true
+            named && (it.clickable || it.scrollable)
         }
         assertTrue(
-            "the trim handles are drawn, not views, so they must not appear as nodes: $handleLike",
+            "the trim handles are drawn, not views, so no tappable handle may appear: $handleLike",
             handleLike.isEmpty(),
         )
     }

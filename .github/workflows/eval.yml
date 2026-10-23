@@ -1,0 +1,128 @@
+name: Eval (LLM in the loop)
+
+# The evaluation runs a real model against the testbed screens on a real emulator.
+#
+# It is deliberately not part of CI. It costs tokens and emulator minutes, and its result is a
+# pass rate to look at rather than a gate to pass: a model's ordinary variance must not look
+# like a code regression. It runs on demand and on a schedule, and it writes its result into
+# docs/EVAL_REPORT.md on the branch it ran from.
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Model name to evaluate'
+        required: false
+        default: 'gemini-2.0-flash'
+  schedule:
+    # Weekly, Monday 06:00 UTC. Often enough to notice a prompt drifting, rare enough to be
+    # kind to a free tier.
+    - cron: '0 6 * * 1'
+
+concurrency:
+  group: eval-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  eval:
+    name: Eval on the emulator
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        run: |
+          set -o pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          SDKMANAGER="$(ls -d "$SDK_ROOT"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)"
+          [ -n "$SDKMANAGER" ] || { echo "sdkmanager not found" >&2; exit 1; }
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "platform-tools" > /dev/null
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run the evaluation on the emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          # Passed to the instrumentation as an argument rather than read from the app's own
+          # settings, so the eval cannot touch or be confused by a real provider configuration.
+          EVAL_API_KEY: ${{ secrets.EVAL_API_KEY }}
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -x
+
+            ./gradlew installDebug installDebugAndroidTest :testbed:installDebug --stacktrace
+
+            adb shell pm grant com.phoneagent.debug android.permission.POST_NOTIFICATIONS || true
+            adb shell appops set com.phoneagent.debug SYSTEM_ALERT_WINDOW allow || true
+            adb shell cmd notification allow_listener \
+              com.phoneagent.debug/com.phoneagent.service.PhoneAgentNotificationListener || true
+            adb shell settings put secure enabled_accessibility_services \
+              com.phoneagent.debug/com.phoneagent.service.PhoneAgentAccessibilityService
+            adb shell settings put secure accessibility_enabled 1
+
+            # The suite is one test class; the runner retries inside it. `-e` passes the key and
+            # the model to the instrumentation, where they never touch disk.
+            ./gradlew connectedDebugAndroidTest --stacktrace \
+              -Pandroid.testInstrumentationRunnerArguments.class=com.phoneagent.eval.EvalInstrumentedTest \
+              -Pandroid.testInstrumentationRunnerArguments.evalApiKey="$EVAL_API_KEY" \
+              -Pandroid.testInstrumentationRunnerArguments.evalModel="${{ inputs.model || 'gemini-2.0-flash' }}"
+
+      - name: Pull the eval report
+        if: always()
+        run: |
+          mkdir -p eval-out
+          adb pull /sdcard/Android/data/com.phoneagent.debug/files/eval-report.md eval-out/ || true
+          cat eval-out/eval-report.md || echo "no report was produced"
+
+      - name: Append the result to the report file
+        if: always()
+        run: |
+          set -o pipefail
+          if [ ! -f eval-out/eval-report.md ]; then
+            echo "No report to append; the run did not reach the eval."
+            exit 0
+          fi
+          # Keep the marker out of the committed file; the row and detail are what matter.
+          grep -v '<!-- eval row -->' eval-out/eval-report.md >> docs/EVAL_REPORT.md
+          git config user.name "openhands"
+          git config user.email "openhands@all-hands.dev"
+          git add docs/EVAL_REPORT.md
+          git diff --cached --quiet || git commit -m "Eval: record the run result"
+          git push || echo "Nothing to push."
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: |
+            eval-out/**
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          retention-days: 30

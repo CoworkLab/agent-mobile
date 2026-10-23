@@ -1,0 +1,99 @@
+name: Release
+
+# A signed release, published so the in-app updater can find it.
+#
+# It runs only on a tag, because a release is a deliberate act. The versionCode is the CI run
+# number, which only ever increases, so the next build always installs over the last one
+# without an "app not installed" error. The APK is signed with the same keystore every time;
+# a different key would make Android refuse the update rather than fail it visibly.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Signed release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        run: |
+          set -o pipefail
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          SDKMANAGER="$(ls -d "$SDK_ROOT"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | head -1)"
+          [ -n "$SDKMANAGER" ] || { echo "sdkmanager not found" >&2; exit 1; }
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" --install "platforms;android-36" "build-tools;36.0.0" "platform-tools" > /dev/null
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Decode the keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          set -o pipefail
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "KEYSTORE_BASE64 is not set; a signed release cannot be produced." >&2
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/ks"
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/ks/release.jks"
+          echo "KEYSTORE_PATH=$RUNNER_TEMP/ks/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build the signed release
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --stacktrace
+
+      - name: Verify the signature and the version code
+        run: |
+          set -o pipefail
+          APK="$(ls app/build/outputs/apk/release/*.apk | head -1)"
+          echo "APK=$APK" >> "$GITHUB_ENV"
+          # Fail here rather than ship an unsigned or debug-signed APK that cannot be updated
+          # over the previous release.
+          "$ANDROID_HOME"/build-tools/36.0.0/apksigner verify --print-certs "$APK"
+          "$ANDROID_HOME"/build-tools/36.0.0/aapt2 dump badging "$APK" | grep -E "package:|versionCode"
+
+      - name: Rename the APK
+        run: |
+          set -o pipefail
+          NAME="phoneagent-${GITHUB_REF_NAME:-manual}-${GITHUB_RUN_NUMBER}.apk"
+          cp "$APK" "$NAME"
+          echo "APK_NAME=$NAME" >> "$GITHUB_ENV"
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          # The updater reads the newest release and compares versionCode, so a stable tag is
+          # not enough: the asset name and the notes both have to be present for it to work.
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: ${{ env.APK_NAME }}
+          # A release that already exists is updated in place, so a re-run does not create a
+          # second release for the same tag.
+          fail_on_unmatched_files: true
+          make_latest: true

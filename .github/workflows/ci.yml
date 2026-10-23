@@ -54,6 +54,12 @@ jobs:
       - name: Unit tests
         run: ./gradlew testDebugUnitTest --stacktrace
 
+      - name: Compile the instrumented tests
+        # A compile-only check. The e2e job is the only place these were ever built, so a typo
+        # in a device test cost a full emulator run to discover. Compiling here makes that
+        # failure show up in minutes, for free, before any emulator starts.
+        run: ./gradlew compileDebugAndroidTestKotlin --stacktrace
+
       - name: Assemble debug and release
         run: ./gradlew assembleDebug assembleRelease --stacktrace
 

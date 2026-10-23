@@ -17,7 +17,9 @@ jobs:
   instrumented:
     name: Instrumented tests (API ${{ matrix.api-level }})
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Below the one-hour cap on purpose: a hung step then leaves time to still run the
+    # collect-and-upload steps rather than being killed with the logs unread.
+    timeout-minutes: 45
 
     strategy:
       fail-fast: false
@@ -90,9 +92,14 @@ jobs:
 
       - name: Collect logcat
         if: always()
+        # `adb logcat -d` blocks forever when the emulator runner has already shut the device
+        # down, which is exactly what happens here: the previous step tears it down on failure.
+        # Without the timeout the job hangs until the one-hour job limit and the artifacts that
+        # explain the failure are never uploaded.
         run: |
-          adb logcat -d > logcat-api${{ matrix.api-level }}.txt || true
-          adb shell dumpsys accessibility > dumpsys-accessibility-api${{ matrix.api-level }}.txt || true
+          timeout 30 adb logcat -d > logcat-api${{ matrix.api-level }}.txt || true
+          timeout 30 adb shell dumpsys accessibility > dumpsys-accessibility-api${{ matrix.api-level }}.txt || true
+          ls -la logcat-api${{ matrix.api-level }}.txt || true
 
       - name: Pull perception artifacts
         if: always()

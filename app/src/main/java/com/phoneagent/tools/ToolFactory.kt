@@ -5,6 +5,7 @@ import com.phoneagent.safety.IntentValidator
 import com.phoneagent.safety.PackageDenylist
 import com.phoneagent.safety.RiskClassifier
 import com.phoneagent.safety.SafetyGuard
+import com.phoneagent.memory.SkillLibrary
 import com.phoneagent.safety.SafetyConfigLoader
 import com.phoneagent.util.Logger
 
@@ -25,6 +26,11 @@ object ToolFactory {
         actuator: Actuator,
         auditLog: IntentAuditLog = InMemoryIntentAuditLog(),
         denylistPatterns: List<String> = PackageDenylist.DEFAULT_PATTERNS,
+        /**
+         * The skills the model may read. An empty library simply means no `load_skill` tool is
+         * offered, so the prompt and the tool list stay in agreement.
+         */
+        skills: SkillLibrary = SkillLibrary(),
     ): ToolRegistry {
         val keywords = loadKeywords(context)
         val policy = loadIntentPolicy(context)
@@ -54,6 +60,9 @@ object ToolFactory {
                 ),
             )
             add(BatchActionsTool(batchValidator, guard, registry, logger))
+            if (skills.all().isNotEmpty()) {
+                add(LoadSkillTool(skills, logger))
+            }
         }
 
         registry.setAll(tools)

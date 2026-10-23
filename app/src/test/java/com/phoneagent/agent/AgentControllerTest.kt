@@ -161,6 +161,69 @@ class AgentControllerTest {
     }
 
     @Test
+    fun `a confirmation that times out is reported and the loop moves on`() = runTest {
+        // The whole point of the timeout: an unanswered confirmation must not hold the task
+        // open. Silence is read as "no", which is the safe direction, and the loop carries on.
+        var timedOut = false
+        var step = 0
+        val controller = AgentController(
+            logger(),
+            this,
+            maxSteps = 10,
+            stepRunner = { _, _, _ ->
+                step++
+                if (step == 1) {
+                    StepOutcome.WaitingUser("May I send it?", timeoutMs = 1_000)
+                } else {
+                    StepOutcome.Done("moved on")
+                }
+            },
+            observer = { "screen" },
+            onAnswerTimeout = { timedOut = true },
+        )
+
+        controller.start("send something risky")
+        advanceUntilIdle()
+
+        assertTrue("the timeout callback must fire", timedOut)
+        assertEquals(AgentState.DONE, controller.status.value.state)
+        assertEquals("moved on", controller.status.value.summary)
+    }
+
+    @Test
+    fun `a clarification with no timeout waits indefinitely`() = runTest {
+        // A question that is not a confirmation has no deadline: a person may take as long as
+        // they like, and cutting them off would silently change what the agent was asked.
+        var step = 0
+        val controller = AgentController(
+            logger(),
+            this,
+            maxSteps = 10,
+            stepRunner = { _, _, _ ->
+                step++
+                if (step == 1) {
+                    StepOutcome.WaitingUser("Which account?")
+                } else {
+                    StepOutcome.Done("done")
+                }
+            },
+            observer = { "screen" },
+            onAnswerTimeout = { throw AssertionError("a clarification must not time out") },
+        )
+
+        controller.start("transfer")
+        advanceUntilIdle()
+
+        assertEquals(AgentState.WAITING_USER, controller.status.value.state)
+        assertTrue(controller.isRunning)
+
+        controller.userAnswer("Savings")
+        advanceUntilIdle()
+
+        assertEquals(AgentState.DONE, controller.status.value.state)
+    }
+
+    @Test
     fun `acknowledge clears a terminal state back to idle`() = runTest {
         val controller = controller(this) { _, _, _ -> StepOutcome.Done("ok") }
 

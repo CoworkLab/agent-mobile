@@ -10,7 +10,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 
 /**
@@ -28,6 +30,22 @@ class AgentController(
     private val maxSteps: Int = 60,
     private val stepRunner: suspend (goal: String, stepIndex: Int, observation: String) -> StepOutcome,
     private val observer: suspend () -> String,
+    /**
+     * Where a person's answer goes.
+     *
+     * The controller only knows that a question is pending; it does not know whether the
+     * question was a confirmation ("may I send this?") or a clarification ("which account?").
+     * Those resume differently, so the answer is handed back to whoever asked and the caller
+     * decides. Without this the loop could ask a question and then never hear the reply.
+     */
+    private val onAnswer: (String) -> Unit = {},
+    /**
+     * Called when a question timed out rather than being answered.
+     *
+     * A timeout is not a stop: the loop carries on. The callback lets the caller turn silence
+     * on a confirmation into a denial, which is the safe reading.
+     */
+    private val onAnswerTimeout: () -> Unit = {},
 ) {
     private val _status = MutableStateFlow(AgentStatus())
     val status: StateFlow<AgentStatus> = _status.asStateFlow()
@@ -88,16 +106,31 @@ class AgentController(
                         state = AgentState.WAITING_USER,
                         question = outcome.question,
                     )
-                    val answer = awaitAnswer()
-                    if (answer == null) {
-                        _status.value = _status.value.copy(
-                            state = AgentState.CANCELLED,
-                            summary = "Stopped.",
-                        )
-                        return
+                    when (val answer = awaitAnswer(outcome.timeoutMs)) {
+                        is Answer.Given -> {
+                            onAnswer(answer.text)
+                            _status.value = _status.value.copy(question = null)
+                            step++
+                        }
+
+                        Answer.TimedOut -> {
+                            logger.w("AgentController", "No answer came; continuing without one.")
+                            onAnswerTimeout()
+                            _status.value = _status.value.copy(
+                                question = null,
+                                lastNote = "No answer came, so I moved on.",
+                            )
+                            step++
+                        }
+
+                        Answer.Stopped -> {
+                            _status.value = _status.value.copy(
+                                state = AgentState.CANCELLED,
+                                summary = "Stopped.",
+                            )
+                            return
+                        }
                     }
-                    _status.value = _status.value.copy(question = null)
-                    step++
                 }
 
                 is StepOutcome.Done -> {
@@ -140,13 +173,23 @@ class AgentController(
         )
     }
 
-    private suspend fun awaitAnswer(): String? {
+    /** The three ways waiting can end. A timeout and a stop are not the same thing. */
+    private sealed interface Answer {
+        data class Given(val text: String) : Answer
+        data object TimedOut : Answer
+        data object Stopped : Answer
+    }
+
+    private suspend fun awaitAnswer(timeoutMs: Long?): Answer {
         val deferred = CompletableDeferred<String>()
         pendingAnswer = deferred
         return try {
-            deferred.await()
+            val text = if (timeoutMs == null) deferred.await() else withTimeout(timeoutMs) { deferred.await() }
+            Answer.Given(text)
+        } catch (timeout: TimeoutCancellationException) {
+            Answer.TimedOut
         } catch (c: CancellationException) {
-            null
+            Answer.Stopped
         } finally {
             pendingAnswer = null
         }
