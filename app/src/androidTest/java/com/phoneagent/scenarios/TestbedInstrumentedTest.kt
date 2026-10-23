@@ -62,8 +62,19 @@ class TestbedInstrumentedTest {
      */
     private fun openScreen(activity: String) {
         requireTestbed()
-        device.executeShellCommand("am start -n $testbedPackage/.$activity")
+
+        // Put the notification shade away first. A swipe that ran off the edge of a small screen
+        // can pull it down, and once down it sits over every later capture: the tree comes back
+        // with the shade's text and the activity underneath is unreadable. That is what turned a
+        // scroll test's stray swipe into six failures in unrelated screens.
+        device.executeShellCommand("cmd statusbar collapse")
+
+        // `-W` waits for the launch to finish, so the screen is the one that was asked for rather
+        // than whatever was there before. Waiting on the package alone is not enough: the
+        // launcher is the same package, so that wait is satisfied by the screen being replaced.
+        device.executeShellCommand("am start -W -n $testbedPackage/.$activity")
         device.wait(Until.hasObject(By.pkg(testbedPackage)), 10_000)
+        device.waitForIdle()
     }
 
     private fun capture(): ScreenSnapshot = runBlocking {
@@ -98,12 +109,14 @@ class TestbedInstrumentedTest {
         // The one thing the JVM harness cannot model: an intent that carries data into the
         // screen. The composer must arrive with the text filled in and the Send button still
         // present and un-pressed. Reaching the screen is not permission to send.
+        device.executeShellCommand("cmd statusbar collapse")
         device.executeShellCommand(
-            "am start -a android.intent.action.VIEW " +
+            "am start -W -a android.intent.action.VIEW " +
                 "-d 'testchat://compose?to=123&text=meeting%20at%206' " +
                 "-n $testbedPackage/.ChatActivity",
         )
         device.wait(Until.hasObject(By.pkg(testbedPackage)), 10_000)
+        device.waitForIdle()
 
         val snapshot = capture()
         val text = textOf(snapshot)
@@ -169,8 +182,15 @@ class TestbedInstrumentedTest {
             textOf(first).contains("Target item 47"),
         )
 
+        // Relative to the display, not fixed pixels. The emulator's screen is not the size the
+        // coordinates were first written for, and a swipe that starts outside it is not a scroll
+        // — it is a gesture on whatever is at the edge, which on Android pulls the shade down.
+        val centreX = device.displayWidth / 2
         repeat(12) {
-            device.executeShellCommand("input swipe 540 1800 540 400 300")
+            device.executeShellCommand(
+                "input swipe $centreX ${device.displayHeight * 3 / 4} " +
+                    "$centreX ${device.displayHeight / 4} 300",
+            )
         }
         device.waitForIdle()
 
