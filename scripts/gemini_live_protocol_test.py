@@ -1,29 +1,27 @@
 #!/usr/bin/env python3
 """
-Real-world end-to-end test of the Mobile Agent <-> Gemini Live API protocol.
+Real-world diagnostic matrix for the Mobile Agent <-> Gemini Live API.
 
-Speaks the EXACT wire protocol the app speaks (network/GeminiLiveWebSocket.kt):
-  1. wss connect with ?key=API_KEY
-  2. setup message: model + system_instruction + generation_config (AUDIO/Puck,
-     temperature 0.6) + tools (the app's full functionDeclarations + google_search)
-  3. client_content turn (same JSON shape as sendClientContent)
-  4. expects setupComplete -> model audio turn -> toolCall -> tool_response -> completion
+Purpose: empirically identify WHY the agent stops responding, by replaying the
+EXACT wire payloads different versions of the app sent, against the REAL API:
 
-Phases:
-  A. Model availability probe: tries each model the app ships (GeminiConstants.SUPPORTED_MODELS)
-  B. Full agent loop on the first live model: text in -> AUDIO out bytes -> tool call
-     round trip (open_app) -> turn completion.
+  V1  Part 7 provider, model gemini-3.1-flash-live-preview (the "known working" combo)
+  V2  Part 7 provider, model gemini-3.8-live
+  V3  Current app setup (ToolRegistry-style functionDeclarations + google_search)
+  V4  functionDeclarations WITHOUT google_search (isolate the grounding combo)
+  V5  google_search ALONE (no functionDeclarations)
+  V6  Part 7 setup + transcription request fields (inputAudioTranscription etc.)
+
+Each variant: connect -> setup -> expect setupComplete (or capture the server
+error) -> send one text turn -> count audio bytes / tool calls / transcript.
 
 Usage:
   GEMINI_API_KEY=AIza... python3 scripts/gemini_live_protocol_test.py
-  (CI: the live-protocol-test job injects the secret; missing key -> graceful skip)
-
-Exit codes: 0 pass, 1 fail, 2 skipped (no key).
+Exit codes: 0 = all critical variants passed, 1 = failure(s), 2 = skipped.
 """
 import base64
 import json
 import os
-import struct
 import sys
 import time
 import urllib.request
@@ -37,73 +35,75 @@ except ImportError:
 WS_BASE = ("wss://generativelanguage.googleapis.com/ws/"
            "google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent")
 
-# GeminiConstants.SUPPORTED_MODELS (keep in sync with the app)
-APP_MODELS = [
-    "models/gemini-3.1-flash-live-preview",
-    "models/gemini-3.8-live",
-    "models/gemini-3.1-flash-agent",
+MODEL_31 = "models/gemini-3.1-flash-live-preview"
+MODEL_38 = "models/gemini-3.8-live"
+
+PROMPT = (
+    "You are Mobile Agent: an autonomous, on-device Android AI agent running on the "
+    "Gemini Live API. You are professional, accurate, to the point. "
+    "How you address the user is dynamic and comes from memory only - never default "
+    "to an honorific on your own. Execute tools honestly; never fake completion."
+)
+
+# Part 7's exact 21 tool names for the classic declaration set (subset used here:
+# the wire behaviour with 2 simple declarations is equivalent for setup validation;
+# the FULL 21/100-declaration payloads are validated by the ToolRegistry JVM tests).
+def decl(name, desc, props=None, required=None):
+    p = {"type": "OBJECT", "properties": props or {}}
+    if required:
+        p["required"] = required
+    return {"name": name, "description": desc, "parameters": p}
+
+PART7_TOOLS = [
+    decl("open_app", "Opens an app installed on the user's phone.",
+         {"app_name": {"type": "STRING", "description": "The app to open."},
+          "app_number": {"type": "INTEGER", "description": "Optional 1-based index."}},
+         ["app_name"]),
+    decl("task_completed", "Call this tool only after the user's requested task is visibly confirmed complete.",
+         {"summary": {"type": "STRING", "description": "Brief summary."}},
+         ["summary"]),
 ]
-DEFAULT_VOICE = "Puck"
 
-PASS = []
-FAIL = []
-
-
-def check(name, ok, detail=""):
-    (PASS if ok else FAIL).append((name, detail))
-    print(f"  [{'PASS' if ok else 'FAIL'}] {name}" + (f" - {detail}" if detail else ""))
-
-
-def rest_model_list(api_key):
-    """Mirror of ApiConnectionActivity.testConnection: v1beta/models REST probe."""
-    url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}&pageSize=200"
-    try:
-        with urllib.request.urlopen(url, timeout=20) as r:
-            names = [m["name"] for m in json.load(r).get("models", [])]
-        return names
-    except urllib.error.HTTPError as e:
-        print(f"  REST model list failed: HTTP {e.code} (key validity problem)")
-        return []
-    except Exception as e:
-        print(f"  REST model list failed: {e}")
-        return []
+CURRENT_TOOLS = [
+    decl("open_app", "Launch an app by name (e.g. WhatsApp, Spotify, Instagram).",
+         {"app": {"type": "STRING", "description": "app name or package name"}},
+         ["app"]),
+    decl("task_completed", "Finish the current task with an honest report.",
+         {"summary": {"type": "STRING"}, "success": {"type": "BOOLEAN"}},
+         ["summary"]),
+]
 
 
-def build_setup(model: str) -> dict:
-    """Byte-faithful reproduction of GeminiLiveWebSocket.sendSetupMessage()."""
-    system_instruction = (
-        "You are Mobile Agent: an autonomous, on-device Android AI agent running on the "
-        "Gemini Live API. You are professional, accurate, to the point. "
-        "How you address the user is dynamic and comes from memory only - never default "
-        "to an honorific on your own. Execute tools honestly; never fake completion."
-    )
-    return {"setup": {
+def build_setup(model, tools, include_google=False, snake_case=True,
+                include_transcription=False, temperature=0.6):
+    def sc(key_camel, key_snake):
+        return key_snake if snake_case else key_camel
+
+    setup = {"setup": {
         "model": model,
-        "system_instruction": {"parts": [{"text": system_instruction}]},
-        "generation_config": {
-            "response_modalities": ["AUDIO"],
-            "speech_config": {"voice_config": {"prebuilt_voice_config": {"voice_name": DEFAULT_VOICE}}},
-            "temperature": 0.6,
+        sc("systemInstruction", "system_instruction"): {
+            "parts": [{"text": PROMPT}]},
+        sc("generationConfig", "generation_config"): {
+            sc("responseModalities", "response_modalities"): ["AUDIO"],
+            sc("speechConfig", "speech_config"): {
+                sc("voiceConfig", "voice_config"): {
+                    sc("prebuiltVoiceConfig", "prebuilt_voice_config"): {
+                        sc("voiceName", "voice_name"): "Puck"}}},
+            "temperature": temperature,
         },
-        "tools": [
-            {"functionDeclarations": [{
-                "name": "open_app",
-                "description": "Launch an app by name (e.g. WhatsApp, Spotify, Instagram).",
-                "parameters": {"type": "OBJECT", "properties": {
-                    "app": {"type": "STRING", "description": "app name or package name"}},
-                    "required": ["app"]}},
-                {"name": "task_completed",
-                 "description": "Finish the current task with an honest report.",
-                 "parameters": {"type": "OBJECT", "properties": {
-                     "summary": {"type": "STRING"},
-                     "success": {"type": "BOOLEAN"}}}},
-            ]},
-            {"google_search": {}},
-        ],
     }}
+    tool_list = list(tools)
+    if include_google:
+        tool_list.append({"google_search": {}})
+    if tool_list:
+        setup["setup"]["tools"] = tool_list
+    if include_transcription:
+        setup["setup"][sc("outputAudioTranscription", "outputAudioTranscription")] = {}
+        setup["setup"][sc("inputAudioTranscription", "inputAudioTranscription")] = {}
+    return setup
 
 
-def recv_json(ws, timeout_s: float):
+def recv_json(ws, timeout_s):
     ws.settimeout(timeout_s)
     raw = ws.recv()
     if isinstance(raw, (bytes, bytearray)):
@@ -111,110 +111,84 @@ def recv_json(ws, timeout_s: float):
     return json.loads(raw)
 
 
-def collect_audio_bytes(payload: dict) -> int:
+def collect_audio_bytes(payload):
     n = 0
     sc = payload.get("serverContent") or {}
-    for turn_key in ("modelTurn", "turnOutput", "audio"):
-        node = sc.get(turn_key)
-        parts = node.get("parts") if isinstance(node, dict) else None
-        for part in (parts or []):
-            data = (part.get("inlineData") or {}).get("data")
-            if data:
+    node = sc.get("modelTurn")
+    parts = node.get("parts") if isinstance(node, dict) else None
+    for part in (parts or []):
+        data = (part.get("inlineData") or {}).get("data")
+        if data:
+            try:
                 n += len(base64.b64decode(data))
+            except Exception:
+                pass
     return n
 
 
-def probe_model(api_key: str, model: str) -> bool:
-    """Phase A: does the API accept a full setup for this model?"""
+def run_variant(tag, api_key, setup, send_text=True, t_setup=30, t_turn=45):
+    """Returns dict with outcome details."""
+    out = {"tag": tag, "setup_ok": False, "error": None, "audio": 0,
+           "tool_calls": [], "text": "", "transcript_user": "", "transcript_out": "",
+           "turn_complete": False}
+    ws = None
     try:
-        ws = create_connection(f"{WS_BASE}?key={api_key}", timeout=25,
-                               suppress_origin=True)
-        try:
-            ws.send(json.dumps(build_setup(model)))
-            deadline = time.time() + 30
-            while time.time() < deadline:
-                msg = recv_json(ws, 30)
-                if "setupComplete" in msg:
-                    return True
-                if "error" in msg:
-                    print(f"    server error: {msg['error'].get('code')} {str(msg['error'].get('message'))[:160]}")
-                    return False
-            return False
-        finally:
-            ws.close()
-    except Exception as e:
-        print(f"    transport error: {type(e).__name__}: {str(e)[:160]}")
-        return False
-
-
-def full_agent_loop(api_key: str, model: str) -> None:
-    """Phase B: text in -> audio out -> tool call -> tool response -> completion."""
-    ws = create_connection(f"{WS_BASE}?key={api_key}", timeout=25, suppress_origin=True)
-    try:
-        t0 = time.time()
-        ws.send(json.dumps(build_setup(model)))
-        while True:
-            msg = recv_json(ws, 30)
+        ws = create_connection(f"{WS_BASE}?key={api_key}", timeout=25, suppress_origin=True)
+        ws.send(json.dumps(setup))
+        deadline = time.time() + t_setup
+        while time.time() < deadline:
+            msg = recv_json(ws, t_setup)
             if "setupComplete" in msg:
+                out["setup_ok"] = True
                 break
             if "error" in msg:
-                raise RuntimeError(f"setup rejected: {msg['error']}")
-        check("setup accepted (schema + grounding valid)", True, f"{time.time()-t0:.1f}s")
+                e = msg["error"]
+                out["error"] = f"{e.get('code')} {str(e.get('message'))[:220]}"
+                return out
+        if not out["setup_ok"]:
+            out["error"] = "timeout waiting for setupComplete"
+            return out
 
-        # Text turn, identical shape to GeminiLiveWebSocket.sendClientContent()
-        ws.send(json.dumps({"client_content": {"turns": [{"role": "user", "parts": [
-            {"text": "Open Spotify for me using the open_app tool right now. "
-                     "Do not ask anything, just call the tool."}
-        ]}], "turn_complete": True}}))
-
-        tool_calls, audio_bytes, text_out = [], 0, ""
-        deadline = time.time() + 90
-        while time.time() < deadline and not tool_calls:
-            msg = recv_json(ws, 90)
-            audio_bytes += collect_audio_bytes(msg)
-            sc = msg.get("serverContent") or {}
-            for part in ((sc.get("modelTurn") or {}).get("parts") or []):
-                text_out += part.get("text", "")
-            tc = msg.get("toolCall") or sc.get("toolCall")
-            if tc:
-                tool_calls = tc.get("functionCalls") or []
-
-        check("model produced an AUDIO turn (voice stack input path)", audio_bytes > 0,
-              f"{audio_bytes} bytes of PCM")
-        check("model invoked a tool from the schema", bool(tool_calls),
-              text_out[:80] if text_out and not tool_calls else
-              (", ".join(c.get("name", "?") for c in tool_calls)))
-
-        if tool_calls:
-            # tool_response shape identical to sendToolResponse()
-            responses = []
-            for c in tool_calls:
-                if c.get("name") == "open_app":
-                    responses.append({"id": c["id"], "name": "open_app",
-                                      "response": {"success": True, "current_app": "Spotify"}})
-                else:
-                    responses.append({"id": c.get("id", ""), "name": c.get("name", ""),
-                                      "response": {"success": True}})
-            ws.send(json.dumps({"tool_response": {"function_responses": responses}}))
-
-            done = False
-            deadline = time.time() + 60
-            while time.time() < deadline:
-                msg = recv_json(ws, 60)
-                audio_bytes += collect_audio_bytes(msg)
-                sc = msg.get("serverContent") or {}
-                if sc.get("turnComplete"):
-                    done = True
+        if send_text:
+            ws.send(json.dumps({"client_content": {"turns": [
+                {"role": "user", "parts": [{"text": "Say exactly: PONG"}]}
+            ], "turn_complete": True}}))
+            deadline = time.time() + t_turn
+            while time.time() < deadline and not out["turn_complete"]:
+                try:
+                    msg = recv_json(ws, 15)
+                except Exception:
                     break
-                for part in ((sc.get("modelTurn") or {}).get("parts") or []):
-                    text_out += part.get("text", "")
-                if msg.get("toolCall") or (sc.get("toolCall")):
-                    done = True  # follow-up tool call also proves the loop continued
-                    break
-            check("agent loop completed after tool_response (no hang)", done, text_out[:100])
+                out["audio"] += collect_audio_bytes(msg)
+                sce = msg.get("serverContent") or {}
+                for part in ((sce.get("modelTurn") or {}).get("parts") or []):
+                    if part.get("text"):
+                        out["text"] += part["text"]
+                    data = (part.get("inlineData") or {}).get("data")
+                    if data:
+                        try:
+                            out["audio"] += len(base64.b64decode(data))
+                        except Exception:
+                            pass
+                it = sce.get("inputTranscription")
+                if isinstance(it, dict) and it.get("text"):
+                    out["transcript_user"] += it["text"]
+                ot = sce.get("outputTranscription")
+                if isinstance(ot, dict) and ot.get("text"):
+                    out["transcript_out"] += ot["text"]
+                tc = msg.get("toolCall") or sce.get("toolCall")
+                if tc:
+                    out["tool_calls"] += [c.get("name", "?") for c in (tc.get("functionCalls") or [])]
+                if sce.get("turnComplete") or sce.get("generationComplete"):
+                    out["turn_complete"] = True
+        return out
+    except Exception as e:
+        out["error"] = f"{type(e).__name__}: {str(e)[:200]}"
+        return out
     finally:
         try:
-            ws.close()
+            if ws is not None:
+                ws.close()
         except Exception:
             pass
 
@@ -222,35 +196,66 @@ def full_agent_loop(api_key: str, model: str) -> None:
 def main():
     api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
-        print("SKIP: GEMINI_API_KEY not set (live protocol test not run)")
-        return 2
+        print("SKIP: GEMINI_API_KEY not set")
+        sys.exit(2)
 
-    print("== Phase 0: API key validity (REST, mirrors app's Test Connection button) ==")
-    models = rest_model_list(api_key)
-    check("API key authenticates against generativelanguage.googleapis.com", bool(models),
-          f"{len(models)} models visible")
-    if not models:
-        print("FAIL: key cannot list models - nothing further can run.")
-        return 1
+    # REST sanity: key validity + geo check
+    try:
+        req = urllib.request.Request(
+            f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}&pageSize=5")
+        with urllib.request.urlopen(req, timeout=20) as r:
+            print(f"REST probe: HTTP {r.status} (key valid, region OK)")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode()[:200]
+        print(f"REST probe FAILED: HTTP {e.code}: {body}")
+        if "location" in body.lower():
+            print("REGION BLOCK on this runner -> all variants would fail for network reasons.")
+        sys.exit(1)
 
-    print("== Phase A: model availability (the 3 models the app ships) ==")
-    live_model = None
-    for model in APP_MODELS:
-        ok = probe_model(api_key, model)
-        check(f"model accepts BidiGenerateContent setup: {model}", ok)
-        if ok and not live_model:
-            live_model = model
-    if not live_model:
-        print("FAIL: none of the app's models accepted a setup.")
-        return 1
-    print(f"  -> running full agent loop on {live_model}")
+    matrix = [
+        ("V1 part7-provider + 3.1-flash-live-preview (the known-working combo)",
+         build_setup(MODEL_31, PART7_TOOLS)),
+        ("V2 part7-provider + 3.8-live",
+         build_setup(MODEL_38, PART7_TOOLS)),
+        ("V3 current-app tools + google_search + 3.1-flash-live-preview",
+         build_setup(MODEL_31, CURRENT_TOOLS, include_google=True)),
+        ("V4 current-app tools WITHOUT google_search + 3.1-flash-live-preview",
+         build_setup(MODEL_31, CURRENT_TOOLS)),
+        ("V5 google_search alone + 3.1-flash-live-preview",
+         build_setup(MODEL_31, [], include_google=True)),
+        ("V6 part7 + transcription fields + 3.1-flash-live-preview",
+         build_setup(MODEL_31, PART7_TOOLS, include_transcription=True)),
+    ]
 
-    print("== Phase B: full agent loop (text -> audio -> toolCall -> toolResponse -> done) ==")
-    full_agent_loop(api_key, live_model)
+    results = []
+    for tag, setup in matrix:
+        print(f"\n=== {tag} ===")
+        r = run_variant(tag, api_key, setup)
+        results.append(r)
+        if r["error"]:
+            print(f"  setup/turn ERROR: {r['error']}")
+        else:
+            print(f"  setupComplete: YES | audio={r['audio']}B toolCalls={r['tool_calls'] or '-'} "
+                  f"turnComplete={r['turn_complete']}")
+            if r["text"]:
+                print(f"  model text: {r['text'][:120]!r}")
+            if r["transcript_out"]:
+                print(f"  outputTranscription: {r['transcript_out'][:120]!r}")
+        time.sleep(1)
 
-    print(f"\n===== RESULT: {len(PASS)} passed, {len(FAIL)} failed =====")
-    return 0 if not FAIL else 1
+    print("\n" + "=" * 74)
+    print("VERDICT SUMMARY (setupComplete / response received)")
+    print("=" * 74)
+    for r in results:
+        verdict = "OK" if (r["setup_ok"] and (r["audio"] or r["tool_calls"] or r["turn_complete"])) \
+            else ("SETUP-REJECTED" if not r["setup_ok"] else "NO-RESPONSE")
+        print(f"  [{verdict:15s}] {r['tag']}")
+        if r["error"]:
+            print(f"{'':19s}-> {r['error'][:160]}")
+
+    critical_fail = [r for r in results[:2] if not r["setup_ok"]]
+    sys.exit(1 if critical_fail else 0)
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

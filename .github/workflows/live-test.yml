@@ -1,0 +1,30 @@
+name: Live Gemini API test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  live-matrix:
+    name: Real-API setup matrix (Part 7 vs current provider)
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install websocket client
+        run: pip install websocket-client
+
+      - name: Run live protocol matrix against the real Gemini API
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "SKIP: add repo secret GEMINI_API_KEY to enable the live test."
+            exit 0
+          fi
+          python3 scripts/gemini_live_protocol_test.py
