@@ -128,27 +128,46 @@ class GeminiLiveWebSocket(
                                        reason.contains("quota", ignoreCase = true)
                     if (isQuotaError) {
                         Log.w(TAG, "Gemini rate-limited or connection collision (code=$code, reason=$reason). Retrying in cooldown...")
+                        // Surface it once so the user is never left staring at silence —
+                        // Gemini reports quota over the close frame, not a JSON error.
+                        listener.onError("API quota/rate limit reached — retrying automatically...", isFatal = false, errorCode = "QUOTA_EXCEEDED")
                         listener.onConnectionStateChanged("COOLDOWN • RETRYING")
                         scheduleReconnect()
                         return
                     }
 
+                    // Gemini reports setup-payload problems over the WebSocket close frame
+                    // (e.g. 1007 "Invalid JSON payload received. Unknown name ... at setup.tools[N]",
+                    // or "models/<id> not found"). Classify them instead of retrying blindly:
+                    val isModelRejection = reason.contains("not found", ignoreCase = true) ||
+                            reason.contains("not supported", ignoreCase = true) ||
+                            reason.contains("BidiGenerateContent", ignoreCase = true)
+                    if (isModelRejection && activeModel != GeminiConstants.MODEL_3_8_LIVE) {
+                        Log.w(TAG, "Model $activeModel rejected by Gemini (code=$code, reason=$reason). Auto-falling back to ${GeminiConstants.MODEL_3_8_LIVE}")
+                        activeModel = GeminiConstants.MODEL_3_8_LIVE
+                        listener.onConnectionStateChanged("RECONNECTING...")
+                        scheduleReconnect()
+                        return
+                    }
+
+                    val isPayloadRejected = reason.contains("Invalid JSON payload", ignoreCase = true) ||
+                            reason.contains("Unknown name", ignoreCase = true) ||
+                            reason.contains("Cannot find field", ignoreCase = true) ||
+                            reason.contains("Invalid value at", ignoreCase = true)
+                    if (isPayloadRejected) {
+                        // Retrying the same payload is pointless — make the failure VISIBLE
+                        // instead of looping forever with the agent appearing dead.
+                        Log.e(TAG, "Gemini rejected the setup payload (code=$code, reason=$reason)")
+                        listener.onError("Gemini rejected the session setup: $reason", isFatal = true, errorCode = "SETUP_REJECTED")
+                        listener.onConnectionStateChanged("ERROR • SETUP REJECTED")
+                        return
+                    }
+
                     if (code == 1008) {
-                        val isModelError = reason.contains("BidiGenerateContent", ignoreCase = true) ||
-                                           reason.contains("not found", ignoreCase = true) ||
-                                           reason.contains("not supported", ignoreCase = true)
-                        if (isModelError) {
-                            if (activeModel != GeminiConstants.MODEL_3_8_LIVE) {
-                                Log.w(TAG, "Model $activeModel rejected by Gemini ($reason). Auto-falling back to ${GeminiConstants.MODEL_3_8_LIVE}")
-                                activeModel = GeminiConstants.MODEL_3_8_LIVE
-                                listener.onConnectionStateChanged("RECONNECTING...")
-                                scheduleReconnect()
-                                return
-                            }
-                        }
                         listener.onError("Gemini setup was rejected: $reason", isFatal = true, errorCode = "SETUP_REJECTED")
                         listener.onConnectionStateChanged("OFFLINE")
                     } else if (!isManuallyStopped.get()) {
+                        listener.onError("Connection lost (${code}). Retrying...", isFatal = false, errorCode = "CONNECTION_ERROR")
                         listener.onConnectionStateChanged("RECONNECTING...")
                         scheduleReconnect()
                     } else {
@@ -265,7 +284,17 @@ class GeminiLiveWebSocket(
                     listener.onError("API Quota Exceeded: $errMsg", isFatal = true, errorCode = "QUOTA_EXCEEDED")
                     listener.onConnectionStateChanged("ERROR • QUOTA EXCEEDED")
                 } else {
-                    listener.onError("Gemini Error ($errCode): $errMsg", isFatal = false)
+                    val isModelRejected = errMsg.contains("not found", ignoreCase = true) ||
+                            errMsg.contains("not supported", ignoreCase = true) ||
+                            errCode == 404
+                    if (isModelRejected && activeModel != GeminiConstants.MODEL_3_8_LIVE) {
+                        Log.w(TAG, "Model $activeModel rejected via error payload ($errMsg). Auto-falling back to ${GeminiConstants.MODEL_3_8_LIVE}")
+                        activeModel = GeminiConstants.MODEL_3_8_LIVE
+                        listener.onConnectionStateChanged("RECONNECTING...")
+                        scheduleReconnect()
+                    } else {
+                        listener.onError("Gemini Error ($errCode): $errMsg", isFatal = false)
+                    }
                 }
                 return
             }

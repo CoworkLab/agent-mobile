@@ -32,7 +32,10 @@ jobs:
           yes | "$SDKMANAGER" --licenses > /dev/null || true
           "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null
 
-      - name: Run unit tests
+      - name: Run unit tests (includes real Gemini Live API integration test)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_LIVE_IT: "1"
         run: ./gradlew testReleaseUnitTest --stacktrace --no-daemon
 
       - name: Upload test results

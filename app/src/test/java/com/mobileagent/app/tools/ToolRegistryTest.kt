@@ -105,11 +105,17 @@ class ToolRegistryTest {
     }
 
     @Test
-    fun setupToolsJsonCarriesGrounding() {
+    fun setupToolsJsonIsFunctionDeclarationsOnly() {
+        // Verified live against the real Gemini Live API: google_search in the
+        // setup tools makes the server close the WebSocket at setup time, which
+        // used to leave the agent silently reconnecting forever ("no response").
         val setup = ToolRegistry.setupToolsJson()
-        assertEquals("tools array must be [functionDeclarations, google_search]", 2, setup.length())
+        assertEquals("tools array must be [functionDeclarations] only", 1, setup.length())
         assertTrue(setup.getJSONObject(0).has("functionDeclarations"))
-        assertTrue(setup.getJSONObject(1).has("google_search"))
+        assertFalse(
+            "google_search must never be sent in the Live setup payload",
+            setup.toString().contains("google_search")
+        )
     }
 
     @Test

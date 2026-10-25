@@ -244,7 +244,7 @@ open_app + UI tools, then ask_user. When a new pattern works, memory_save it as 
 
 [WEB & RESEARCH]:
 - open_url(url) opens links; web_search(query) searches the web; fetch_page(url) reads a page as text;
-  http_request calls APIs. Native google_search grounding is also available in-session.
+  http_request calls APIs. For real-time facts, news or weather, ALWAYS use web_search/fetch_page - never claim you cannot reach the internet.
 - Never say "I cannot open websites" or "I have no internet access".
 
 [SCHEDULING & MEMORY]:

@@ -8,7 +8,13 @@ import org.json.JSONObject
  *
  * - Declares every callable tool to Gemini Live (compact schema DSL).
  * - Dispatches tool calls to their group implementations.
- * - Adds native `google_search` grounding as a server-side tool.
+ *
+ * IMPORTANT (verified live against the real API, see the live-test CI workflow):
+ * the `google_search` server-side tool is NOT accepted by BidiGenerateContent
+ * sessions on the current API — including it (alone or with functionDeclarations)
+ * makes Google close the WebSocket immediately, which used to leave the agent
+ * silently reconnecting forever (the "agent never responds" bug). Web research
+ * stays available through the WebTools function set instead.
  */
 object ToolRegistry {
 
@@ -125,11 +131,14 @@ object ToolRegistry {
     }
 
     /**
-     * The full `tools` array: client function declarations + native google_search grounding.
+     * The full `tools` array sent in the setup message.
+     *
+     * Verified against the real Gemini Live API: ONLY functionDeclarations are
+     * accepted here. google_search grounding is deliberately NOT included —
+     * it makes the server close the session at setup time.
      */
     fun setupToolsJson(): JSONArray = JSONArray()
         .put(JSONObject().put("functionDeclarations", functionDeclarationsJson()))
-        .put(JSONObject().put("google_search", JSONObject()))
 
     // ---- dispatch -----------------------------------------------------------
 

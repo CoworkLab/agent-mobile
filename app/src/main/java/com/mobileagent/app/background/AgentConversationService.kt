@@ -233,10 +233,31 @@ class AgentConversationService : Service() {
         /** True while a foreground instance of this service exists in any mode. */
         fun isServiceRunning(): Boolean = activeInstance != null
 
+        /** Typed chat messages waiting for a LIVE Gemini session. Never silently dropped. */
+        private val pendingChatMessages = java.util.concurrent.ConcurrentLinkedQueue<String>()
+
         fun sendTextMessage(text: String) {
-            val instance = activeInstance ?: return
-            instance.liveWebSocket?.sendClientContent(text)
-            AgentApp.instance.chatRepository.addTurn(text, "")
+            val trimmed = text.trim()
+            if (trimmed.isEmpty()) return
+            // Show the user's message immediately (placeholder reply), then queue for
+            // delivery. If the service/session is not ready yet, the message is sent
+            // as soon as the session goes LIVE, or an explicit error fills the reply.
+            AgentApp.instance.chatRepository.addTurn(trimmed, "")
+            pendingChatMessages.add(trimmed)
+            val instance = activeInstance
+            if (instance != null) {
+                instance.flushPendingChatMessages()
+                instance.scheduleChatDeliveryWatchdog()
+            }
+        }
+
+        /** Fails every queued chat message with a visible reason on the last pending bubble. */
+        fun rejectPendingChatMessages(reason: String) {
+            if (pendingChatMessages.isEmpty()) return
+            pendingChatMessages.clear()
+            if (reason.isNotBlank()) {
+                AgentApp.instance.chatRepository.updateLastTurnReplyIfPending(reason)
+            }
         }
 
         fun cancelActiveTaskFromOverlay() {
@@ -250,6 +271,7 @@ class AgentConversationService : Service() {
     private var taskProgressOverlay: com.mobileagent.app.ui.agent.TaskProgressOverlay? = null
     private var taskProgressOverlayJob: Job? = null
     private var overlayPermissionWarningTaskId: String? = null
+    private var chatDeliveryWatchdogJob: Job? = null
     private val preferences by lazy { (applicationContext as AgentApp).preferences }
 
     // --- Active-conversation components ---
@@ -826,6 +848,56 @@ class AgentConversationService : Service() {
         }
     }
 
+    /**
+     * Delivers chat messages typed while the session was idle/connecting.
+     * Called from sendTextMessage (when the instance exists) and again when the
+     * Gemini session reaches LIVE, so a message typed during connection setup is
+     * sent exactly once, as soon as the socket can carry it.
+     */
+    fun flushPendingChatMessages() {
+        if (!_isSessionOn.value) {
+            // Chat arrived while idle/standby: wake the live session. The queue
+            // flushes automatically once the connection reaches LIVE.
+            beginActiveConversation()
+            return
+        }
+        val ws = liveWebSocket ?: return
+        if (!ws.isSessionReady()) return
+        while (true) {
+            val next = pendingChatMessages.poll() ?: break
+            synchronized(currentTurnUserText) {
+                if (currentTurnUserText.isNotEmpty() && !currentTurnUserText.endsWith(" ")) {
+                    currentTurnUserText.append(" ")
+                }
+                currentTurnUserText.append(next)
+            }
+            ws.sendClientContent(next)
+            Log.i("AgentService", "Delivered queued chat message to Gemini (${next.length} chars)")
+        }
+    }
+
+    /**
+     * Safety net: if a queued chat message still has not been delivered 30s after
+     * the send attempt (and is still failing 10s later), fill its reply bubble with
+     * an explicit error instead of leaving the user staring at a silent placeholder.
+     */
+    fun scheduleChatDeliveryWatchdog() {
+        chatDeliveryWatchdogJob?.cancel()
+        chatDeliveryWatchdogJob = serviceScope.launch(Dispatchers.Default) {
+            delay(30_000)
+            if (pendingChatMessages.isNotEmpty()) {
+                flushPendingChatMessages()
+                delay(10_000)
+                if (pendingChatMessages.isNotEmpty()) {
+                    pendingChatMessages.clear()
+                    AgentApp.instance.chatRepository.updateLastTurnReplyIfPending(
+                        "[Message not delivered — the agent could not reach Gemini. Check the API key in Settings and your network connection.]"
+                    )
+                }
+            }
+        }
+    }
+
     private fun beginActiveConversation(wakeTriggered: Boolean = false) {
         if (_isSessionOn.value) return
         com.mobileagent.app.automation.agent.AgentTaskEngine.resetForSession()
@@ -845,6 +917,9 @@ class AgentConversationService : Service() {
         val preferences = app.preferences
         val apiKey = preferences.apiKey.trim()
         if (apiKey.isBlank()) {
+            rejectPendingChatMessages(
+                "[API KEY MISSING] Open Settings → API & Connection, paste your Gemini API key, save, then try again."
+            )
             _liveError.value = AgentLiveError(
                 title = "API KEY MISSING",
                 message = "No Gemini API Key configured. Please enter your API Key in Settings to activate Agent.",
@@ -857,6 +932,9 @@ class AgentConversationService : Service() {
         }
 
         if (!PermissionHelper.hasAllRequiredPermissions(this)) {
+            rejectPendingChatMessages(
+                "[PERMISSIONS REQUIRED] Grant Microphone and Notification permissions in Authorizations, then try again."
+            )
             _liveError.value = AgentLiveError(
                 title = "PERMISSIONS REQUIRED",
                 message = "Agent requires Microphone and Notification permissions to run. Please grant them in Authorizations.",
@@ -873,6 +951,8 @@ class AgentConversationService : Service() {
         _isSessionOn.value = true
         _isStandby.value = false
         lastResponseTimedOut = false
+        // Typed chat that arrived before the session started must not linger forever.
+        scheduleChatDeliveryWatchdog()
         val now = System.currentTimeMillis()
         lastUserSpeechDetectedTime = now
         lastOwnerVerifiedTimestamp = now
@@ -936,6 +1016,8 @@ class AgentConversationService : Service() {
                                         liveWebSocket?.sendAudioChunk(chunk)
                                     }
                                 }
+                                // Deliver chat messages typed while connecting/standby.
+                                flushPendingChatMessages()
                                 // Reset autonomous task state on fresh connection
                                 isAutonomousTaskRunning = false
                                 isAutonomousContinuationTurn = false
@@ -2993,6 +3075,7 @@ class AgentConversationService : Service() {
         cancelAllActiveTools()
         com.mobileagent.app.automation.agent.AgentTaskEngine.resetForSession()
         _isSessionOn.value = false
+        rejectPendingChatMessages("[Message not delivered — the agent session was closed before it could be sent.]")
         finalizeTurn()
 
 

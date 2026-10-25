@@ -11,7 +11,8 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Web tools: raw HTTP requests, a key-less web search (DuckDuckGo Lite) and clean-text page fetch.
- * The Gemini Live session also carries native google_search grounding, so the model can combine both.
+ * These are the session's only web-research path: the Live setup payload must stay
+ * functionDeclarations-only (google_search grounding closes the Live session - verified live).
  */
 object WebTools {
 
@@ -79,7 +80,7 @@ object WebTools {
                 if (results.isEmpty()) {
                     ctx.fail(
                         "Web search returned no results (the endpoint may be rate-limited).",
-                        JSONObject().put("fix", "Retry once, or use fetch_page on a known URL, or rely on native google_search grounding.")
+                        JSONObject().put("fix", "Retry once, or use fetch_page on a known URL.")
                     )
                 } else {
                     val arr = org.json.JSONArray()

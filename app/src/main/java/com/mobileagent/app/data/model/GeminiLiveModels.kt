@@ -71,6 +71,7 @@ object GeminiConstants {
     )
 
     const val WS_BASE_URL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
+    const val REST_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
     const val SESSION_RENEWAL_MS = 9 * 60 * 1000L // 9 minutes
 }
 
