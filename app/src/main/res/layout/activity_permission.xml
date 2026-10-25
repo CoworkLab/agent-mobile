@@ -32,7 +32,7 @@
                     android:id="@+id/btnBack"
                     android:layout_width="44dp"
                     android:layout_height="44dp"
-                    android:background="@drawable/bg_jarvis_icon_square"
+                    android:background="@drawable/bg_agent_icon_square"
                     android:src="@drawable/ic_back"
                     app:tint="?attr/themeTextPrimary"
                     android:contentDescription="Back" />
@@ -68,22 +68,22 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="22dp"
                 android:layout_marginBottom="24dp">
 
                 <ImageView
                     android:layout_width="140dp"
                     android:layout_height="48dp"
-                    android:src="@drawable/ic_jarvis_logo"
+                    android:src="@drawable/ic_agent_logo"
                     android:scaleType="fitCenter"
-                    android:contentDescription="Jarvis Logo" />
+                    android:contentDescription="Agent Logo" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="TechGPT X • Neural Assistant"
+                    android:text="Pro • Neural Assistant"
                     android:textColor="?attr/themeTextPrimary"
                     android:textSize="16sp"
                     android:textStyle="bold" />
@@ -93,7 +93,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:gravity="center"
-                    android:text="Grant necessary authorizations so Jarvis can listen, speak, deliver accurate weather, and process your requests seamlessly."
+                    android:text="Grant necessary authorizations so Agent can listen, speak, deliver accurate weather, and process your requests seamlessly."
                     android:textColor="?attr/themeTextMuted"
                     android:textSize="12.5sp"
                     android:lineSpacingExtra="2dp" />
@@ -105,7 +105,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="18dp"
                 android:layout_marginBottom="14dp">
 
@@ -118,9 +118,9 @@
                     <ImageView
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_avatar"
+                        android:background="@drawable/bg_agent_avatar"
                         android:padding="8dp"
-                        android:src="@drawable/ic_mic_jarvis"
+                        android:src="@drawable/ic_mic_agent"
                         app:tint="?attr/themeAccent" />
 
                     <LinearLayout
@@ -154,7 +154,7 @@
                         android:text="Grant"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:background="@drawable/bg_jarvis_pill_button"
+                        android:background="@drawable/bg_agent_pill_button"
                         android:textColor="#FFFFFF" />
                 </LinearLayout>
 
@@ -162,7 +162,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="Required for voice conversations, voice recognition, and real-time audio interaction with Jarvis."
+                    android:text="Required for voice conversations, voice recognition, and real-time audio interaction with Agent."
                     android:textColor="?attr/themeTextMuted"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -173,7 +173,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="18dp"
                 android:layout_marginBottom="14dp">
 
@@ -186,7 +186,7 @@
                     <ImageView
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_avatar"
+                        android:background="@drawable/bg_agent_avatar"
                         android:padding="8dp"
                         android:src="@drawable/ic_weather_sun"
                         app:tint="?attr/themeAccent" />
@@ -222,7 +222,7 @@
                         android:text="Grant"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:background="@drawable/bg_jarvis_pill_button"
+                        android:background="@drawable/bg_agent_pill_button"
                         android:textColor="#FFFFFF" />
                 </LinearLayout>
 
@@ -241,7 +241,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="18dp"
                 android:layout_marginBottom="14dp">
 
@@ -254,7 +254,7 @@
                     <ImageView
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_avatar"
+                        android:background="@drawable/bg_agent_avatar"
                         android:padding="8dp"
                         android:src="@drawable/ic_nav_bell"
                         app:tint="?attr/themeAccent" />
@@ -290,7 +290,7 @@
                         android:text="Grant"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:background="@drawable/bg_jarvis_pill_button"
+                        android:background="@drawable/bg_agent_pill_button"
                         android:textColor="#FFFFFF" />
                 </LinearLayout>
 
@@ -309,7 +309,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="18dp"
                 android:layout_marginBottom="28dp">
 
@@ -322,7 +322,7 @@
                     <ImageView
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_avatar"
+                        android:background="@drawable/bg_agent_avatar"
                         android:padding="8dp"
                         android:src="@drawable/ic_nav_settings"
                         app:tint="?attr/themeAccent" />
@@ -358,7 +358,7 @@
                         android:text="Grant"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:background="@drawable/bg_jarvis_pill_button"
+                        android:background="@drawable/bg_agent_pill_button"
                         android:textColor="#FFFFFF" />
                 </LinearLayout>
 
@@ -366,7 +366,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="Optional: Allows Jarvis floating bubble to appear anywhere on your phone for quick one-tap voice commands."
+                    android:text="Optional: Allows Agent floating bubble to appear anywhere on your phone for quick one-tap voice commands."
                     android:textColor="?attr/themeTextMuted"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -377,7 +377,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="18dp"
                 android:layout_marginBottom="28dp">
 
@@ -390,7 +390,7 @@
                     <ImageView
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_avatar"
+                        android:background="@drawable/bg_agent_avatar"
                         android:padding="8dp"
                         android:src="@drawable/ic_checklist_tasks"
                         app:tint="?attr/themeAccent" />
@@ -426,7 +426,7 @@
                         android:text="Grant"
                         android:textSize="12sp"
                         android:textStyle="bold"
-                        android:background="@drawable/bg_jarvis_pill_button"
+                        android:background="@drawable/bg_agent_pill_button"
                         android:textColor="#FFFFFF" />
                 </LinearLayout>
 
@@ -434,7 +434,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
-                    android:text="Essential for autonomous AI actions: allows Jarvis to tap buttons, search apps, type messages, and scroll hands-free on your screen."
+                    android:text="Essential for autonomous AI actions: allows Agent to tap buttons, search apps, type messages, and scroll hands-free on your screen."
                     android:textColor="?attr/themeTextMuted"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -448,7 +448,7 @@
                 android:textColor="#FFFFFF"
                 android:textSize="14sp"
                 android:textStyle="bold"
-                android:background="@drawable/bg_jarvis_pill_button"
+                android:background="@drawable/bg_agent_pill_button"
                 android:layout_marginBottom="12dp" />
 
             <com.google.android.material.button.MaterialButton

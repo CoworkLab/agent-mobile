@@ -8,7 +8,7 @@
 
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/settingsFragmentView"
-        android:name="com.jarvis.assistant.ui.settings.SettingsFragment"
+        android:name="com.mobileagent.app.ui.settings.SettingsFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 

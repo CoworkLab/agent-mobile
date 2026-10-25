@@ -1,13 +1,13 @@
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$signingRoot = Join-Path $env:LOCALAPPDATA "JARVIS\signing"
-$keyStore = Join-Path $signingRoot "jarvis-release.p12"
+$signingRoot = Join-Path $env:LOCALAPPDATA "AGENT\signing"
+$keyStore = Join-Path $signingRoot "agent-release.p12"
 $credentialFile = Join-Path $signingRoot "release-password.xml"
-$keyAlias = "jarvis-release"
+$keyAlias = "agent-release"
 
 if (-not (Test-Path -LiteralPath $keyStore) -or -not (Test-Path -LiteralPath $credentialFile)) {
-    throw "Release signing material is missing from the current Windows user's protected JARVIS signing folder."
+    throw "Release signing material is missing from the current Windows user's protected AGENT signing folder."
 }
 
 $securePassword = Import-Clixml -LiteralPath $credentialFile
@@ -19,19 +19,19 @@ $passwordPointer = [IntPtr]::Zero
 try {
     $passwordPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword)
     $plainPassword = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($passwordPointer)
-    $env:JARVIS_RELEASE_STORE_FILE = $keyStore
-    $env:JARVIS_RELEASE_STORE_PASSWORD = $plainPassword
-    $env:JARVIS_RELEASE_KEY_ALIAS = $keyAlias
-    $env:JARVIS_RELEASE_KEY_PASSWORD = $plainPassword
-    $env:JARVIS_DEVELOPER_NAME = "TechGpt X"
-    $env:JARVIS_COPYRIGHT_OWNER = "TechGpt X"
+    $env:AGENT_RELEASE_STORE_FILE = $keyStore
+    $env:AGENT_RELEASE_STORE_PASSWORD = $plainPassword
+    $env:AGENT_RELEASE_KEY_ALIAS = $keyAlias
+    $env:AGENT_RELEASE_KEY_PASSWORD = $plainPassword
+    $env:AGENT_DEVELOPER_NAME = "Mobile Agent"
+    $env:AGENT_COPYRIGHT_OWNER = "Mobile Agent"
 
     $keytool = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME "bin\keytool.exe" } else { (Get-Command keytool -ErrorAction Stop).Source }
-    $certificateInfo = (& $keytool -list -v -keystore $keyStore -alias $keyAlias -storepass:env JARVIS_RELEASE_STORE_PASSWORD | Out-String)
+    $certificateInfo = (& $keytool -list -v -keystore $keyStore -alias $keyAlias -storepass:env AGENT_RELEASE_STORE_PASSWORD | Out-String)
     if ($LASTEXITCODE -ne 0 -or $certificateInfo -notmatch "SHA256:\s*([0-9A-Fa-f:]+)") {
         throw "Could not read the release certificate fingerprint."
     }
-    $env:JARVIS_RELEASE_CERT_SHA256 = $Matches[1] -replace ":", ""
+    $env:AGENT_RELEASE_CERT_SHA256 = $Matches[1] -replace ":", ""
 
     Push-Location $repoRoot
     try {
@@ -46,11 +46,11 @@ try {
         [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($passwordPointer)
     }
     $plainPassword = $null
-    Remove-Item Env:JARVIS_RELEASE_STORE_PASSWORD -ErrorAction SilentlyContinue
-    Remove-Item Env:JARVIS_RELEASE_KEY_PASSWORD -ErrorAction SilentlyContinue
-    Remove-Item Env:JARVIS_RELEASE_STORE_FILE -ErrorAction SilentlyContinue
-    Remove-Item Env:JARVIS_RELEASE_KEY_ALIAS -ErrorAction SilentlyContinue
-    Remove-Item Env:JARVIS_RELEASE_CERT_SHA256 -ErrorAction SilentlyContinue
-    Remove-Item Env:JARVIS_DEVELOPER_NAME -ErrorAction SilentlyContinue
-    Remove-Item Env:JARVIS_COPYRIGHT_OWNER -ErrorAction SilentlyContinue
+    Remove-Item Env:AGENT_RELEASE_STORE_PASSWORD -ErrorAction SilentlyContinue
+    Remove-Item Env:AGENT_RELEASE_KEY_PASSWORD -ErrorAction SilentlyContinue
+    Remove-Item Env:AGENT_RELEASE_STORE_FILE -ErrorAction SilentlyContinue
+    Remove-Item Env:AGENT_RELEASE_KEY_ALIAS -ErrorAction SilentlyContinue
+    Remove-Item Env:AGENT_RELEASE_CERT_SHA256 -ErrorAction SilentlyContinue
+    Remove-Item Env:AGENT_DEVELOPER_NAME -ErrorAction SilentlyContinue
+    Remove-Item Env:AGENT_COPYRIGHT_OWNER -ErrorAction SilentlyContinue
 }

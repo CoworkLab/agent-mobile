@@ -56,7 +56,7 @@
       return `<svg class="avatar-image" viewBox="0 0 80 70" aria-hidden="true"><defs><linearGradient id="g-${name}" x1="0" y1="0" x2="1" y2="1"><stop stop-color="${light}"/><stop offset="1" stop-color="${color}"/></linearGradient></defs>${antenna}${arms}<g fill="url(#g-${name})" stroke="rgba(40,50,70,.12)" stroke-width="1.2">${shapes[name]}</g><ellipse cx="32" cy="34" rx="2.4" ry="3.6" fill="#263247"/><ellipse cx="48" cy="34" rx="2.4" ry="3.6" fill="#263247"/><path d="M33 44q7 7 14 0" fill="none" stroke="#263247" stroke-width="2.4" stroke-linecap="round"/></svg>`;
     }
     const gallery = document.getElementById("gallery");
-    gallery.innerHTML = avatars.map(([name, color, light]) => `<button id="avatar-${name}" class="avatar-card" type="button" onclick="window.JarvisAvatarPicker?.selectAvatar('${name}')">${icon(name, color, light)}<span class="avatar-name">${name}</span></button>`).join("");
+    gallery.innerHTML = avatars.map(([name, color, light]) => `<button id="avatar-${name}" class="avatar-card" type="button" onclick="window.AgentAvatarPicker?.selectAvatar('${name}')">${icon(name, color, light)}<span class="avatar-name">${name}</span></button>`).join("");
     window.setSelectedAvatar = name => {
       document.querySelectorAll(".avatar-card").forEach(card => card.classList.remove("selected"));
       document.getElementById(`avatar-${name}`)?.classList.add("selected");
@@ -65,7 +65,7 @@
       document.documentElement.style.setProperty("--label", label);
       document.documentElement.style.setProperty("--accent", accent);
     };
-    window.JarvisAvatarPicker?.pageReady();
+    window.AgentAvatarPicker?.pageReady();
   </script>
 </body>
 </html>

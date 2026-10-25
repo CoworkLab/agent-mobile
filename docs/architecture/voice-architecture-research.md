@@ -1,10 +1,10 @@
-# Jarvis Background Voice Architecture
+# Agent Background Voice Architecture
 
 ## Recommendation
 
 Use `gemini-3.1-flash-live-preview` for the active conversation. Google describes it as an audio-to-audio model optimized for low-latency dialogue and voice-first applications. Its default minimal thinking is the latency-oriented configuration. The app now makes it the default and reduces microphone chunks from 40 ms to 20 ms.
 
-The Live API must not be used as a 24-hour wake-word listener. It would transmit ambient speech, cost tokens, and still has connection/session limits. Instead, Jarvis now uses an Android foreground microphone service in standby and opens Gemini only after its wake phrase detector finds `Jarvis`, `Hey Jarvis`, or `Jarvis wake up`.
+The Live API must not be used as a 24-hour wake-word listener. It would transmit ambient speech, cost tokens, and still has connection/session limits. Instead, Agent now uses an Android foreground microphone service in standby and opens Gemini only after its wake phrase detector finds `Agent`, `Hey Agent`, or `Agent wake up`.
 
 ## Interaction states
 
@@ -12,13 +12,13 @@ The Live API must not be used as a 24-hour wake-word listener. It would transmit
 |---|---|---|---|
 | Active conversation | 16 kHz PCM streamed in 20 ms chunks | Open | Natural live conversation and barge-in |
 | Background standby | Android speech recognition checks only wake phrases | Closed | TV/room speech is not sent to Gemini and cannot trigger a reply |
-| Wake detected | Service broadcasts a local event | Reopened | Jarvis is ready for the next spoken request |
+| Wake detected | Service broadcasts a local event | Reopened | Agent is ready for the next spoken request |
 
-After two minutes without detected speech, or after the transcribed command “Jarvis, go to background,” Jarvis says: “Sir, I am going in the background. If you need me, call me.” It then enters wake-only standby.
+After two minutes without detected speech, or after the transcribed command “Agent, go to background,” Agent says: “Sir, I am going in the background. If you need me, call me.” It then enters wake-only standby.
 
 ## Android constraints
 
-On Android 14+, continuing microphone capture outside the UI requires a user-started foreground service with `foregroundServiceType="microphone"`, `FOREGROUND_SERVICE_MICROPHONE`, and `RECORD_AUDIO`. The service must be started while the app is visible; this app does that when the user turns Jarvis on. A persistent notification is required and is intentionally present.
+On Android 14+, continuing microphone capture outside the UI requires a user-started foreground service with `foregroundServiceType="microphone"`, `FOREGROUND_SERVICE_MICROPHONE`, and `RECORD_AUDIO`. The service must be started while the app is visible; this app does that when the user turns Agent on. A persistent notification is required and is intentionally present.
 
 The standby service uses a partial wake lock so it can listen while the display is off. This uses noticeable battery power. It can continue for many hours while the service remains alive, but Android cannot guarantee operation after force-stop, OEM battery killing, revoked microphone permission, or a reboot. A production-grade, system-level “always on” assistant requires the user to select the app as the device VoiceInteractionService/default assistant; Android keeps that selected service bound for hotword use.
 

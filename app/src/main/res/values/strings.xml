@@ -6,8 +6,8 @@
         <item>Top</item>
         <item>Bottom</item>
     </string-array>
-    <string name="app_name">JARVIS</string>
-    <string name="jarvis_title">JARVIS</string>
+    <string name="app_name">Mobile Agent</string>
+    <string name="agent_title">Mobile Agent</string>
 
     <string name="state_idle">IDLE</string>
     <string name="state_listening">LISTENING</string>
@@ -41,9 +41,9 @@
     <string name="btn_save">Save</string>
     <string name="btn_paste">Paste from clipboard</string>
     <string name="chat_label_you">YOU</string>
-    <string name="chat_label_jarvis">JARVIS</string>
+    <string name="chat_label_agent">Mobile Agent</string>
 
-    <string name="accessibility_service_desc">Provides automation for sending WhatsApp messages and executing approved hands-free actions for JARVIS.</string>
+    <string name="accessibility_service_desc">Provides automation for sending WhatsApp messages and executing approved hands-free actions for Mobile Agent.</string>
     <string name="memory_title">MEMORY CORE</string>
     <string name="memory_subtitle">Long-Term &amp; Contextual Knowledge</string>
     <string name="search_memories">Search memories&#8230;</string>

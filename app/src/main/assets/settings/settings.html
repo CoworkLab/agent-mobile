@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/>
-<title>JARVIS Settings</title>
+<title>AGENT Settings</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -615,7 +615,7 @@
         <div class="input-wrapper">
           <input class="text-input" id="userNameInput" placeholder="Sir / Boss / Your Name" type="text"/>
         </div>
-        <div class="field-hint">JARVIS will address you respectfully using this name.</div>
+        <div class="field-hint">AGENT will address you respectfully using this name.</div>
       </div>
     </div>
   </div>
@@ -647,7 +647,7 @@
         <option value="Odia">Odia (ଓଡ଼ିଆ)</option>
         <option value="Urdu">Urdu (اردو)</option>
       </select>
-      <div class="field-hint">Select a specific Indian language to force JARVIS to talk ONLY in that language. Select Auto to dynamically mirror whatever language you speak.</div>
+      <div class="field-hint">Select a specific Indian language to force AGENT to talk ONLY in that language. Select Auto to dynamically mirror whatever language you speak.</div>
     </div>
   </div>
 
@@ -718,7 +718,7 @@
     </div>
     <div class="card">
       <div class="switch-title">Persistent Neural Memory</div>
-      <div class="field-hint">JARVIS remembers your routine, favorite songs, contacts, and preferences across restarts.</div>
+      <div class="field-hint">AGENT remembers your routine, favorite songs, contacts, and preferences across restarts.</div>
       <div style="display:flex; gap:10px; margin-top:12px;">
         <button class="card-action-btn secondary" style="margin-top:0; flex:1;" onclick="viewMemories()">VIEW MEMORIES</button>
         <button class="card-action-btn danger" style="margin-top:0; flex:1;" onclick="clearMemories()">CLEAR ALL</button>
@@ -746,7 +746,7 @@
       <div class="perm-item">
         <div class="perm-info">
           <div class="perm-name">Background Service / Notifications</div>
-          <div class="perm-desc">Allows JARVIS to stay active in background</div>
+          <div class="perm-desc">Allows AGENT to stay active in background</div>
         </div>
         <div class="perm-badge missing" id="permNotification" onclick="requestPerm('notification')">ALLOW</div>
       </div>
@@ -796,11 +796,11 @@
       <div>
         <div class="yt-badge">
           <svg fill="currentColor" height="14" viewBox="0 0 24 24" width="14"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-          @TechGptX
+          @mobileagent
         </div>
       </div>
       <div style="margin-top:10px; font-size:0.70rem; color:var(--text-muted); font-weight:600;">
-        JARVIS Mark 85 System • Neural Core Edition
+        AGENT Arc System • Pro Edition
       </div>
     </div>
   </div>
@@ -822,14 +822,14 @@
   }
 
   function goBack() {
-    if (window.JarvisSettingsBridge && window.JarvisSettingsBridge.onBackClicked) {
-      window.JarvisSettingsBridge.onBackClicked();
+    if (window.AgentSettingsBridge && window.AgentSettingsBridge.onBackClicked) {
+      window.AgentSettingsBridge.onBackClicked();
     }
   }
 
   function pasteApiKey() {
-    if (window.JarvisSettingsBridge && window.JarvisSettingsBridge.pasteApiKey) {
-      window.JarvisSettingsBridge.pasteApiKey();
+    if (window.AgentSettingsBridge && window.AgentSettingsBridge.pasteApiKey) {
+      window.AgentSettingsBridge.pasteApiKey();
     }
   }
 
@@ -870,32 +870,32 @@
   }
 
   function openVoiceEnrollment() {
-    if (window.JarvisSettingsBridge && window.JarvisSettingsBridge.openVoiceEnrollment) {
-      window.JarvisSettingsBridge.openVoiceEnrollment();
+    if (window.AgentSettingsBridge && window.AgentSettingsBridge.openVoiceEnrollment) {
+      window.AgentSettingsBridge.openVoiceEnrollment();
     }
   }
 
   function viewMemories() {
-    if (window.JarvisSettingsBridge && window.JarvisSettingsBridge.viewMemories) {
-      window.JarvisSettingsBridge.viewMemories();
+    if (window.AgentSettingsBridge && window.AgentSettingsBridge.viewMemories) {
+      window.AgentSettingsBridge.viewMemories();
     }
   }
 
   function clearMemories() {
-    if (window.JarvisSettingsBridge && window.JarvisSettingsBridge.clearMemories) {
-      window.JarvisSettingsBridge.clearMemories();
+    if (window.AgentSettingsBridge && window.AgentSettingsBridge.clearMemories) {
+      window.AgentSettingsBridge.clearMemories();
     }
   }
 
   function requestPerm(type) {
-    if (window.JarvisSettingsBridge && window.JarvisSettingsBridge.requestPermission) {
-      window.JarvisSettingsBridge.requestPermission(type);
+    if (window.AgentSettingsBridge && window.AgentSettingsBridge.requestPermission) {
+      window.AgentSettingsBridge.requestPermission(type);
     }
   }
 
   function grantAllPerms() {
-    if (window.JarvisSettingsBridge && window.JarvisSettingsBridge.requestAllPermissions) {
-      window.JarvisSettingsBridge.requestAllPermissions();
+    if (window.AgentSettingsBridge && window.AgentSettingsBridge.requestAllPermissions) {
+      window.AgentSettingsBridge.requestAllPermissions();
     }
   }
 
@@ -966,8 +966,8 @@
       silentExecutionMode: document.getElementById('switchSilentExecution').checked
     };
 
-    if (window.JarvisSettingsBridge && window.JarvisSettingsBridge.saveSettings) {
-      window.JarvisSettingsBridge.saveSettings(JSON.stringify(payload));
+    if (window.AgentSettingsBridge && window.AgentSettingsBridge.saveSettings) {
+      window.AgentSettingsBridge.saveSettings(JSON.stringify(payload));
     }
   }
 

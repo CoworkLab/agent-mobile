@@ -32,7 +32,7 @@
                     android:id="@+id/btnBack"
                     android:layout_width="44dp"
                     android:layout_height="44dp"
-                    android:background="@drawable/bg_jarvis_icon_square"
+                    android:background="@drawable/bg_agent_icon_square"
                     android:src="@drawable/ic_back"
                     app:tint="?attr/themeTextPrimary"
                     android:contentDescription="Back" />
@@ -68,16 +68,16 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="22dp"
                 android:layout_marginBottom="20dp">
 
                 <ImageView
                     android:layout_width="140dp"
                     android:layout_height="48dp"
-                    android:src="@drawable/ic_jarvis_logo"
+                    android:src="@drawable/ic_agent_logo"
                     android:scaleType="fitCenter"
-                    android:contentDescription="Jarvis Logo" />
+                    android:contentDescription="Agent Logo" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -105,7 +105,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:background="@drawable/bg_jarvis_status_badge"
+                    android:background="@drawable/bg_agent_status_badge"
                     android:paddingHorizontal="14dp"
                     android:paddingVertical="6dp"
                     android:layout_marginTop="14dp">
@@ -114,7 +114,7 @@
                         android:id="@+id/dotAccessibilityStatus"
                         android:layout_width="8dp"
                         android:layout_height="8dp"
-                        android:background="@drawable/bg_jarvis_mic_center"
+                        android:background="@drawable/bg_agent_mic_center"
                         android:backgroundTint="@color/status_green" />
 
                     <TextView
@@ -161,7 +161,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="20dp"
                 android:layout_marginBottom="20dp">
 
@@ -176,13 +176,13 @@
                     <FrameLayout
                         android:layout_width="38dp"
                         android:layout_height="38dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="20dp"
                             android:layout_height="20dp"
                             android:layout_gravity="center"
-                            android:src="@drawable/ic_mic_jarvis"
+                            android:src="@drawable/ic_mic_agent"
                             app:tint="?attr/themeAccent"
                             android:contentDescription="Mic" />
                     </FrameLayout>
@@ -231,7 +231,7 @@
                     <FrameLayout
                         android:layout_width="38dp"
                         android:layout_height="38dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="20dp"
@@ -285,7 +285,7 @@
                     <FrameLayout
                         android:layout_width="38dp"
                         android:layout_height="38dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="20dp"
@@ -316,7 +316,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Jarvis uses your phone&apos;s built-in Android accessibility service to type messages, tap send, search YouTube, and adjust settings just like your own hands."
+                            android:text="Agent uses your phone&apos;s built-in Android accessibility service to type messages, tap send, search YouTube, and adjust settings just like your own hands."
                             android:textColor="?attr/themeTextMuted"
                             android:textSize="12.5sp"
                             android:lineSpacingExtra="2dp" />
@@ -341,14 +341,14 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="20dp"
                 android:layout_marginBottom="20dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Why does Jarvis need Accessibility Permission?"
+                    android:text="Why does Agent need Accessibility Permission?"
                     android:textColor="?attr/themeTextPrimary"
                     android:textSize="15sp"
                     android:textStyle="bold"
@@ -358,7 +358,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
-                    android:text="Android protects other apps from being controlled. For Jarvis to send WhatsApp messages or open YouTube videos on your command, you must grant the Jarvis Accessibility Service permission."
+                    android:text="Android protects other apps from being controlled. For Agent to send WhatsApp messages or open YouTube videos on your command, you must grant the Agent Accessibility Service permission."
                     android:textColor="?attr/themeTextMuted"
                     android:textSize="13sp"
                     android:lineSpacingExtra="3dp" />
@@ -367,7 +367,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:padding="14dp"
                     android:layout_marginTop="14dp">
 
@@ -383,7 +383,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        android:text="1. Tap the 'Open Accessibility Settings' button below.\n2. Tap 'Downloaded Apps' or 'Installed Services'.\n3. Tap 'Jarvis Accessibility Service'.\n4. Turn the switch ON and tap 'Allow'."
+                        android:text="1. Tap the 'Open Accessibility Settings' button below.\n2. Tap 'Downloaded Apps' or 'Installed Services'.\n3. Tap 'Agent Accessibility Service'.\n4. Turn the switch ON and tap 'Allow'."
                         android:textColor="?attr/themeTextPrimary"
                         android:textSize="12.5sp"
                         android:lineSpacingExtra="4dp" />
@@ -436,7 +436,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="18dp"
                 android:layout_marginBottom="20dp">
 
@@ -525,7 +525,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
-                    android:text="• &quot;Remember that my passport is in the blue bag&quot;\n• &quot;Where is my passport?&quot;\n• &quot;What is the weather outside?&quot;\n• &quot;Good morning Jarvis, what is my schedule today?&quot;"
+                    android:text="• &quot;Remember that my passport is in the blue bag&quot;\n• &quot;Where is my passport?&quot;\n• &quot;What is the weather outside?&quot;\n• &quot;Good morning Agent, what is my schedule today?&quot;"
                     android:textColor="?attr/themeTextMuted"
                     android:textSize="12.5sp"
                     android:lineSpacingExtra="3dp" />
@@ -548,7 +548,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="20dp"
                 android:layout_marginBottom="24dp">
 
@@ -601,7 +601,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:paddingTop="6dp"
@@ -616,7 +616,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingVertical="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
@@ -672,7 +672,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingVertical="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
@@ -728,7 +728,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingVertical="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
@@ -758,7 +758,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="@techgptx.ai"
+                            android:text="@mobileagent"
                             android:textColor="?attr/themeTextMuted"
                             android:textSize="12sp" />
                     </LinearLayout>
@@ -778,7 +778,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:text="JARVIS INTELLIGENCE OS • TECHGPT X\nAutonomous Hands-Free Architecture"
+                android:text="MOBILE AGENT\nAutonomous Hands-Free Architecture"
                 android:textColor="?attr/themeTextMuted"
                 android:textSize="11.5sp"
                 android:lineSpacingExtra="3dp" />

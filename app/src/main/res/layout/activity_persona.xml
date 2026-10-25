@@ -25,7 +25,7 @@
             android:id="@+id/btnBack"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:background="@drawable/bg_jarvis_icon_square"
+            android:background="@drawable/bg_agent_icon_square"
             android:src="@drawable/ic_back"
             app:tint="?attr/themeTextPrimary"
             android:contentDescription="Back" />
@@ -103,7 +103,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
-                        android:text="Jarvis Pro · Charon"
+                        android:text="Agent Pro · Charon"
                         android:textColor="?attr/themeTextPrimary"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -113,20 +113,20 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
-                        android:text="Ready to help, TechGPT X."
+                        android:text="Ready to help, Pro."
                         android:textColor="?attr/themeTextMuted"
                         android:textSize="12sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- 1. Jarvis Pro (Default) -->
+            <!-- 1. Agent Pro (Default) -->
             <LinearLayout
-                android:id="@+id/cardPersonaJarvis"
+                android:id="@+id/cardPersonaAgent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
@@ -138,11 +138,11 @@
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:background="@drawable/bg_jarvis_avatar"
+                        android:background="@drawable/bg_agent_avatar"
                         android:src="@drawable/ic_nav_home"
                         app:tint="@color/accent_sapphire"
                         android:padding="12dp"
-                        android:contentDescription="Jarvis" />
+                        android:contentDescription="Agent" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -161,7 +161,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Jarvis Pro"
+                            android:text="Agent Pro"
                             android:textColor="?attr/themeTextPrimary"
                             android:textSize="16sp"
                             android:fontFamily="sans-serif-medium"
@@ -177,7 +177,7 @@
                             android:textSize="10sp"
                             android:textStyle="bold"
                             android:fontFamily="sans-serif-medium"
-                            android:background="@drawable/bg_jarvis_chip"
+                            android:background="@drawable/bg_agent_chip"
                             android:paddingStart="6dp"
                             android:paddingEnd="6dp"
                             android:paddingTop="2dp"
@@ -188,7 +188,7 @@
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Intelligent, witty &amp; strategic assistant by TechGPT X"
+                        android:text="Intelligent, witty &amp; strategic assistant by Pro"
                         android:textColor="?attr/themeTextMuted"
                         android:textSize="12sp"
                         android:fontFamily="sans-serif"
@@ -196,7 +196,7 @@
                 </LinearLayout>
 
                 <RadioButton
-                    android:id="@+id/rbSelectJarvis"
+                    android:id="@+id/rbSelectAgent"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:clickable="false"
@@ -210,7 +210,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
@@ -222,7 +222,7 @@
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:background="@drawable/bg_jarvis_avatar"
+                        android:background="@drawable/bg_agent_avatar"
                         android:src="@drawable/ic_nav_chat"
                         app:tint="#EC4899"
                         android:padding="12dp"
@@ -261,7 +261,7 @@
                             android:textSize="10sp"
                             android:textStyle="bold"
                             android:fontFamily="sans-serif-medium"
-                            android:background="@drawable/bg_jarvis_chip"
+                            android:background="@drawable/bg_agent_chip"
                             android:paddingStart="6dp"
                             android:paddingEnd="6dp"
                             android:paddingTop="2dp"
@@ -294,7 +294,7 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
@@ -306,7 +306,7 @@
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:background="@drawable/bg_jarvis_avatar"
+                        android:background="@drawable/bg_agent_avatar"
                         android:src="@drawable/ic_settings_shield"
                         app:tint="#3B82F6"
                         android:padding="12dp"
@@ -345,7 +345,7 @@
                             android:textSize="10sp"
                             android:textStyle="bold"
                             android:fontFamily="sans-serif-medium"
-                            android:background="@drawable/bg_jarvis_chip"
+                            android:background="@drawable/bg_agent_chip"
                             android:paddingStart="6dp"
                             android:paddingEnd="6dp"
                             android:paddingTop="2dp"
@@ -371,14 +371,14 @@
                     android:focusable="false" />
             </LinearLayout>
 
-            <!-- 4. TechGPT X Mode -->
+            <!-- 4. Pro Mode -->
             <LinearLayout
-                android:id="@+id/cardPersonaTechGpt"
+                android:id="@+id/cardPersonaPro"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:clickable="true"
                 android:focusable="true"
@@ -390,11 +390,11 @@
                     <ImageView
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
-                        android:background="@drawable/bg_jarvis_avatar"
+                        android:background="@drawable/bg_agent_avatar"
                         android:src="@drawable/ic_code_chip"
                         app:tint="#10B981"
                         android:padding="12dp"
-                        android:contentDescription="TechGPT X" />
+                        android:contentDescription="Pro" />
                 </FrameLayout>
 
                 <LinearLayout
@@ -413,7 +413,7 @@
                         <TextView
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="TechGPT X Mode"
+                            android:text="Pro Mode"
                             android:textColor="?attr/themeTextPrimary"
                             android:textSize="16sp"
                             android:fontFamily="sans-serif-medium"
@@ -429,7 +429,7 @@
                             android:textSize="10sp"
                             android:textStyle="bold"
                             android:fontFamily="sans-serif-medium"
-                            android:background="@drawable/bg_jarvis_chip"
+                            android:background="@drawable/bg_agent_chip"
                             android:paddingStart="6dp"
                             android:paddingEnd="6dp"
                             android:paddingTop="2dp"
@@ -448,7 +448,7 @@
                 </LinearLayout>
 
                 <RadioButton
-                    android:id="@+id/rbSelectTechGpt"
+                    android:id="@+id/rbSelectPro"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:clickable="false"
@@ -459,7 +459,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="User Name (Default: TechGPT X)"
+                android:text="User Name (Default: Pro)"
                 android:textColor="?attr/themeTextMuted"
                 android:textSize="13sp"
                 android:fontFamily="sans-serif-medium"
@@ -470,7 +470,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:layout_marginBottom="16dp">
 
@@ -498,8 +498,8 @@
                         android:id="@+id/etUserName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:hint="TechGPT X"
-                        android:text="TechGPT X"
+                        android:hint="Pro"
+                        android:text="Pro"
                         android:inputType="textPersonName"
                         android:textColor="?attr/themeTextPrimary"
                         android:textSize="14sp"
@@ -522,7 +522,7 @@
                 android:id="@+id/rgVoiceGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="14dp"
                 android:layout_marginBottom="24dp">
 
@@ -621,7 +621,7 @@
             android:id="@+id/btnActivatePersona"
             android:layout_width="match_parent"
             android:layout_height="54dp"
-            android:background="@drawable/bg_jarvis_pill_button"
+            android:background="@drawable/bg_agent_pill_button"
             app:backgroundTint="@null"
             android:text="Activate Persona"
             android:textColor="#FFFFFF"

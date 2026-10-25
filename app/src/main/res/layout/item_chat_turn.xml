@@ -48,13 +48,13 @@
     </LinearLayout>
 
     <LinearLayout
-        android:id="@+id/boxJarvisMessage"
+        android:id="@+id/boxAgentMessage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="start"
         android:layout_marginEnd="48dp"
         android:layout_marginTop="8dp"
-        android:background="@drawable/bg_jarvis_bubble"
+        android:background="@drawable/bg_agent_bubble"
         android:orientation="vertical"
         android:paddingHorizontal="14dp"
         android:paddingVertical="10dp">
@@ -62,14 +62,14 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/chat_label_jarvis"
+            android:text="@string/chat_label_agent"
             android:textColor="?attr/themeAccent"
             android:textSize="11sp"
             android:textStyle="bold"
             android:letterSpacing="0.05" />
 
         <TextView
-            android:id="@+id/tvJarvisResponse"
+            android:id="@+id/tvAgentResponse"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="?attr/themeTextPrimary"

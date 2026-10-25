@@ -5,7 +5,7 @@ An Android voice assistant built with Kotlin, Gemini Live, on-device voice compo
 ## Project status
 
 - Android application module: `app`
-- Application ID: `com.jarvis.assistant`
+- Application ID: `com.mobileagent.app`
 - Minimum Android version: Android 8.0 (API 26)
 - Compile and target SDK: 34
 - Java/Kotlin target: 17
@@ -41,13 +41,13 @@ Build outputs are written under `app/build/outputs/` and are generated files, no
 Create and protect a release key outside this repository, then supply these values only in the local shell or Gradle user properties:
 
 ```powershell
-$env:JARVIS_RELEASE_STORE_FILE = 'C:\secure\jarvis-release.jks'
-$env:JARVIS_RELEASE_STORE_PASSWORD = '<local secret>'
-$env:JARVIS_RELEASE_KEY_ALIAS = 'jarvis-release'
-$env:JARVIS_RELEASE_KEY_PASSWORD = '<local secret>'
-$env:JARVIS_RELEASE_CERT_SHA256 = '<64 hex characters from keytool -list -v>'
-$env:JARVIS_DEVELOPER_NAME = 'TechGpt X'
-$env:JARVIS_COPYRIGHT_OWNER = 'TechGpt X'
+$env:AGENT_RELEASE_STORE_FILE = 'C:\secure\agent-release.jks'
+$env:AGENT_RELEASE_STORE_PASSWORD = '<local secret>'
+$env:AGENT_RELEASE_KEY_ALIAS = 'agent-release'
+$env:AGENT_RELEASE_KEY_PASSWORD = '<local secret>'
+$env:AGENT_RELEASE_CERT_SHA256 = '<64 hex characters from keytool -list -v>'
+$env:AGENT_DEVELOPER_NAME = 'TechGpt X'
+$env:AGENT_COPYRIGHT_OWNER = 'TechGpt X'
 .\gradlew.bat :app:assembleRelease
 ```
 
@@ -59,7 +59,7 @@ The certificate fingerprint must be calculated from the same key used to sign th
 .
 ├── app/                         Android application module
 │   └── src/main/
-│       ├── java/com/jarvis/assistant/
+│       ├── java/com/agent/assistant/
 │       │   ├── audio/           Audio capture, playback, and voice handling
 │       │   ├── automation/      Accessibility, actions, and app integrations
 │       │   ├── background/      Conversation foreground service

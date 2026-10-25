@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>JARVIS Particle Orb</title>
+<title>AGENT Particle Orb</title>
 <style>
 :root{--bg:#fff;--fg:#1d2340;--sub:#6b7390;--glass:rgba(255,255,255,.72);--gb:rgba(255,255,255,.9);--chip:#4a527a;--t1:#2f6bff;--t2:#8b5cf6;--t3:#c15de0;--sh:rgba(70,80,170,.22)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -381,7 +381,7 @@ window.addEventListener("resize",handleResize);
 window.addEventListener("orientationchange",()=>setTimeout(handleResize,200));
 if(window.ResizeObserver) new ResizeObserver(handleResize).observe(stage);
 
-window.JarvisOrb={
+window.AgentOrb={
   setState:setOrbState,
   setTheme:n=>applyTheme(n),
   setBackground:hex=>{

@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/bg_jarvis_dock"
+    android:background="@drawable/bg_agent_dock"
     android:paddingStart="20dp"
     android:paddingEnd="20dp"
     android:paddingTop="20dp"
@@ -16,7 +16,7 @@
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:background="@drawable/bg_jarvis_chip"
+        android:background="@drawable/bg_agent_chip"
         android:layout_marginBottom="16dp" />
 
     <TextView
@@ -55,14 +55,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:layout_marginBottom="10dp">
 
                 <View
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:background="@drawable/bg_jarvis_chip"
+                    android:background="@drawable/bg_agent_chip"
                     android:backgroundTint="#F4F6FB" />
 
                 <LinearLayout
@@ -105,14 +105,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:layout_marginBottom="10dp">
 
                 <View
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:background="@drawable/bg_jarvis_chip"
+                    android:background="@drawable/bg_agent_chip"
                     android:backgroundTint="#0A0D1F" />
 
                 <LinearLayout
@@ -155,14 +155,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:layout_marginBottom="10dp">
 
                 <View
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:background="@drawable/bg_jarvis_chip"
+                    android:background="@drawable/bg_agent_chip"
                     android:backgroundTint="#2A0A10" />
 
                 <LinearLayout
@@ -205,14 +205,14 @@
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:layout_marginBottom="10dp">
 
                 <View
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:background="@drawable/bg_jarvis_chip"
+                    android:background="@drawable/bg_agent_chip"
                     android:backgroundTint="#FFE7E1" />
 
                 <LinearLayout
@@ -254,7 +254,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="16dp"
                 android:layout_marginBottom="10dp">
 
@@ -268,7 +268,7 @@
                         android:id="@+id/viewCustomPreview"
                         android:layout_width="28dp"
                         android:layout_height="28dp"
-                        android:background="@drawable/bg_jarvis_chip"
+                        android:background="@drawable/bg_agent_chip"
                         android:backgroundTint="#8B5CF6" />
 
                     <LinearLayout
@@ -325,7 +325,7 @@
                         android:textSize="14sp"
                         android:paddingStart="12dp"
                         android:paddingEnd="12dp"
-                        android:background="@drawable/bg_jarvis_card"
+                        android:background="@drawable/bg_agent_card"
                         android:singleLine="true" />
 
                     <com.google.android.material.button.MaterialButton
@@ -352,7 +352,7 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:layout_margin="4dp"
-                        android:background="@drawable/bg_jarvis_chip"
+                        android:background="@drawable/bg_agent_chip"
                         android:backgroundTint="#000000" />
 
                     <View
@@ -360,7 +360,7 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:layout_margin="4dp"
-                        android:background="@drawable/bg_jarvis_chip"
+                        android:background="@drawable/bg_agent_chip"
                         android:backgroundTint="#1E1B4B" />
 
                     <View
@@ -368,7 +368,7 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:layout_margin="4dp"
-                        android:background="@drawable/bg_jarvis_chip"
+                        android:background="@drawable/bg_agent_chip"
                         android:backgroundTint="#042F2E" />
 
                     <View
@@ -376,7 +376,7 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:layout_margin="4dp"
-                        android:background="@drawable/bg_jarvis_chip"
+                        android:background="@drawable/bg_agent_chip"
                         android:backgroundTint="#451A03" />
 
                     <View
@@ -384,7 +384,7 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:layout_margin="4dp"
-                        android:background="@drawable/bg_jarvis_chip"
+                        android:background="@drawable/bg_agent_chip"
                         android:backgroundTint="#F0FDF4" />
 
                     <View
@@ -392,7 +392,7 @@
                         android:layout_width="32dp"
                         android:layout_height="32dp"
                         android:layout_margin="4dp"
-                        android:background="@drawable/bg_jarvis_chip"
+                        android:background="@drawable/bg_agent_chip"
                         android:backgroundTint="#FAF5FF" />
                 </LinearLayout>
             </LinearLayout>

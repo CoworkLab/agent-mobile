@@ -9,26 +9,26 @@ fun configuredValue(name: String): String? =
 
 fun buildConfigString(value: String): String = "\"${value.replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
-val releaseStorePath = configuredValue("JARVIS_RELEASE_STORE_FILE")
-val releaseStorePassword = configuredValue("JARVIS_RELEASE_STORE_PASSWORD")
-val releaseKeyAlias = configuredValue("JARVIS_RELEASE_KEY_ALIAS")
-val releaseKeyPassword = configuredValue("JARVIS_RELEASE_KEY_PASSWORD")
-val releaseCertSha256 = configuredValue("JARVIS_RELEASE_CERT_SHA256")?.replace(":", "")?.uppercase().orEmpty()
-val developerName = configuredValue("JARVIS_DEVELOPER_NAME")?.ifBlank { null } ?: "Tech GPTx"
-val copyrightOwner = configuredValue("JARVIS_COPYRIGHT_OWNER")?.ifBlank { null } ?: "Tech GPTx"
-val verificationEndpoint = configuredValue("JARVIS_VERIFICATION_ENDPOINT").orEmpty()
+val releaseStorePath = configuredValue("AGENT_RELEASE_STORE_FILE")
+val releaseStorePassword = configuredValue("AGENT_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = configuredValue("AGENT_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = configuredValue("AGENT_RELEASE_KEY_PASSWORD")
+val releaseCertSha256 = configuredValue("AGENT_RELEASE_CERT_SHA256")?.replace(":", "")?.uppercase().orEmpty()
+val developerName = configuredValue("AGENT_DEVELOPER_NAME")?.ifBlank { null } ?: "Mobile Agent"
+val copyrightOwner = configuredValue("AGENT_COPYRIGHT_OWNER")?.ifBlank { null } ?: "Mobile Agent"
+val verificationEndpoint = configuredValue("AGENT_VERIFICATION_ENDPOINT").orEmpty()
 val releaseSigningReady = listOf(releaseStorePath, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }
 
 android {
-    namespace = "com.jarvis.assistant"
+    namespace = "com.mobileagent.app"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.jarvis.assistant"
+        applicationId = "com.mobileagent.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 143
-        versionName = "1.8.7"
+        versionCode = 200
+        versionName = "2.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "DEVELOPER_NAME", buildConfigString(developerName.ifBlank { "Unverified developer" }))
@@ -84,13 +84,13 @@ android {
 tasks.register("verifyReleaseSecurityInputs") {
     doLast {
         check(releaseSigningReady) {
-            "Release signing is not configured. Set JARVIS_RELEASE_STORE_FILE, JARVIS_RELEASE_STORE_PASSWORD, JARVIS_RELEASE_KEY_ALIAS, and JARVIS_RELEASE_KEY_PASSWORD in the local environment or Gradle user properties."
+            "Release signing is not configured. Set AGENT_RELEASE_STORE_FILE, AGENT_RELEASE_STORE_PASSWORD, AGENT_RELEASE_KEY_ALIAS, and AGENT_RELEASE_KEY_PASSWORD in the local environment or Gradle user properties."
         }
         check(releaseCertSha256.matches(Regex("[A-F0-9]{64}"))) {
-            "Set JARVIS_RELEASE_CERT_SHA256 to the SHA-256 fingerprint of the release signing certificate."
+            "Set AGENT_RELEASE_CERT_SHA256 to the SHA-256 fingerprint of the release signing certificate."
         }
         check(developerName.isNotBlank() && copyrightOwner.isNotBlank()) {
-            "Set JARVIS_DEVELOPER_NAME and JARVIS_COPYRIGHT_OWNER to the verified publisher identity."
+            "Set AGENT_DEVELOPER_NAME and AGENT_COPYRIGHT_OWNER to the verified publisher identity."
         }
     }
 }

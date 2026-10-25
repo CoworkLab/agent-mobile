@@ -111,7 +111,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Jarvis is calibrated to your voice. Any speech or commands from strangers, family members, or TV are automatically blocked."
+                        android:text="Agent is calibrated to your voice. Any speech or commands from strangers, family members, or TV are automatically blocked."
                         android:textColor="?attr/themeTextSecondary"
                         android:textSize="13sp"
                         android:lineSpacingExtra="3dp" />
@@ -161,7 +161,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:gravity="center"
-                        android:text="&quot;Hey Jarvis, wake up&quot;"
+                        android:text="&quot;Hey Agent, wake up&quot;"
                         android:textColor="?attr/themeTextPrimary"
                         android:textSize="18sp"
                         android:textStyle="bold" />
@@ -256,7 +256,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
-                        android:text="Test your voice or let a friend speak to verify that Jarvis accepts you and denies them."
+                        android:text="Test your voice or let a friend speak to verify that Agent accepts you and denies them."
                         android:textColor="?attr/themeTextSecondary"
                         android:textSize="12sp" />
 

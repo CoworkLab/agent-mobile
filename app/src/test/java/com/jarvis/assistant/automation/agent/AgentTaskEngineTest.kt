@@ -1,4 +1,4 @@
-package com.jarvis.assistant.automation.agent
+package com.mobileagent.app.automation.agent
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

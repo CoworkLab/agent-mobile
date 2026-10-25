@@ -1,5 +1,5 @@
 # Keep Gson model classes
--keep class com.jarvis.assistant.data.model.** { *; }
+-keep class com.mobileagent.app.data.model.** { *; }
 -keepattributes Signature
 -keepattributes *Annotation*
 
@@ -21,10 +21,10 @@
 -keep class * extends androidx.room.RoomDatabase
 
 
-# ── Tech GPTx Security Module — keep rules ───────────────────────────────────
--keep class com.jarvis.assistant.security.SecurityManager { *; }
--keep class com.jarvis.assistant.security.DeveloperInfo { *; }
--keep class com.jarvis.assistant.security.AppIdentityVerifier { *; }
+# ── Mobile Agent Security Module — keep rules ───────────────────────────────────
+-keep class com.mobileagent.app.security.SecurityManager { *; }
+-keep class com.mobileagent.app.security.DeveloperInfo { *; }
+-keep class com.mobileagent.app.security.AppIdentityVerifier { *; }
 
 # Obfuscate everything else aggressively
 -optimizationpasses 5

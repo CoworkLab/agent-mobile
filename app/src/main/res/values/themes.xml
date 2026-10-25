@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Base App Theme -->
-    <style name="Theme.JarvisAssistant" parent="Theme.JarvisAssistant.Light" />
+    <style name="Theme.AgentAssistant" parent="Theme.AgentAssistant.Light" />
 
     <!-- 1. LIGHT THEME - LIQUID PEARL GLASS EDITION -->
-    <style name="Theme.JarvisAssistant.Light" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Theme.AgentAssistant.Light" parent="Theme.Material3.Light.NoActionBar">
         <item name="android:statusBarColor">#EEF2F9</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">#EEF2F9</item>
@@ -43,7 +43,7 @@
     </style>
 
     <!-- 2. DARK THEME - LIQUID OBSIDIAN GLASS EDITION -->
-    <style name="Theme.JarvisAssistant.Dark" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.AgentAssistant.Dark" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:statusBarColor">#070914</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">#070914</item>
@@ -82,7 +82,7 @@
     </style>
 
     <!-- 3. RED THEME - LIQUID RUBY GLASS EDITION -->
-    <style name="Theme.JarvisAssistant.Red" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.AgentAssistant.Red" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:statusBarColor">#0E0307</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">#0E0307</item>
@@ -121,7 +121,7 @@
     </style>
 
     <!-- 4. SUNSET THEME - LIQUID SUNSET GLASS EDITION -->
-    <style name="Theme.JarvisAssistant.Sunset" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Theme.AgentAssistant.Sunset" parent="Theme.Material3.Light.NoActionBar">
         <item name="android:statusBarColor">#FFF0EA</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">#FFF0EA</item>
@@ -160,7 +160,7 @@
     </style>
 
     <!-- 5. CUSTOM LIGHT - LIQUID GLASS -->
-    <style name="Theme.JarvisAssistant.CustomLight" parent="Theme.Material3.Light.NoActionBar">
+    <style name="Theme.AgentAssistant.CustomLight" parent="Theme.Material3.Light.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
@@ -200,7 +200,7 @@
     </style>
 
     <!-- 6. CUSTOM DARK - LIQUID GLASS -->
-    <style name="Theme.JarvisAssistant.CustomDark" parent="Theme.Material3.Dark.NoActionBar">
+    <style name="Theme.AgentAssistant.CustomDark" parent="Theme.Material3.Dark.NoActionBar">
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
@@ -240,9 +240,9 @@
     </style>
 
     <!-- Legacy style aliases -->
-    <style name="Theme.JarvisAssistant.PearlWhite" parent="Theme.JarvisAssistant.Light" />
-    <style name="Theme.JarvisAssistant.MidnightOnyx" parent="Theme.JarvisAssistant.Dark" />
-    <style name="Theme.JarvisAssistant.CyberpunkNeon" parent="Theme.JarvisAssistant.Dark" />
-    <style name="Theme.JarvisAssistant.EmeraldObsidian" parent="Theme.JarvisAssistant.Dark" />
-    <style name="Theme.JarvisAssistant.RoseGold" parent="Theme.JarvisAssistant.Sunset" />
+    <style name="Theme.AgentAssistant.PearlWhite" parent="Theme.AgentAssistant.Light" />
+    <style name="Theme.AgentAssistant.MidnightOnyx" parent="Theme.AgentAssistant.Dark" />
+    <style name="Theme.AgentAssistant.CyberpunkNeon" parent="Theme.AgentAssistant.Dark" />
+    <style name="Theme.AgentAssistant.EmeraldObsidian" parent="Theme.AgentAssistant.Dark" />
+    <style name="Theme.AgentAssistant.RoseGold" parent="Theme.AgentAssistant.Sunset" />
 </resources>

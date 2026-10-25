@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "JARVIS-Part-7"
+rootProject.name = "MobileAgent"
 include(":app")

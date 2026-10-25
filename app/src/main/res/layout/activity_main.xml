@@ -27,7 +27,7 @@
         android:layout_marginStart="14dp"
         android:layout_marginEnd="14dp"
         android:layout_marginBottom="16dp"
-        android:background="@drawable/bg_jarvis_dock"
+        android:background="@drawable/bg_agent_dock"
         android:elevation="12dp"
         android:clipChildren="false"
         android:clipToPadding="false"
@@ -150,7 +150,7 @@
                     android:id="@+id/ivTabMic"
                     android:layout_width="28dp"
                     android:layout_height="28dp"
-                    android:src="@drawable/ic_mic_jarvis"
+                    android:src="@drawable/ic_mic_agent"
                     app:tint="#FFFFFF"
                     android:contentDescription="Voice" />
 
@@ -247,7 +247,7 @@
                         android:layout_width="6dp"
                         android:layout_height="6dp"
                         android:layout_gravity="top|end"
-                        android:background="@drawable/bg_jarvis_mic_center"
+                        android:background="@drawable/bg_agent_mic_center"
                         android:backgroundTint="@color/status_red" />
                 </FrameLayout>
 
@@ -268,7 +268,7 @@
     </LinearLayout>
 
     <!-- Glowing Liquid Glass Curved Line arching over the center Mic button -->
-    <com.jarvis.assistant.ui.widget.CurvedDockLineView
+    <com.mobileagent.app.ui.widget.CurvedDockLineView
         android:id="@+id/dockCurvedLine"
         android:layout_width="0dp"
         android:layout_height="24dp"

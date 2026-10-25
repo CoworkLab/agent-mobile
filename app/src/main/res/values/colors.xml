@@ -27,21 +27,21 @@
     <color name="status_amber">#F59E0B</color>
 
     <!-- Theme Variables mapped for UI components -->
-    <color name="jarvis_primary">#2563EB</color>
-    <color name="jarvis_primary_bright">#2563EB</color>
-    <color name="jarvis_red_bright">#2563EB</color>
-    <color name="jarvis_red">#2563EB</color>
-    <color name="jarvis_primary_dark">#1D4ED8</color>
-    <color name="jarvis_primary_glow">#332563EB</color>
-    <color name="jarvis_card_bg">#FFFFFF</color>
-    <color name="jarvis_card_border">#E2E8F0</color>
-    <color name="jarvis_dock_bg">#FFFFFF</color>
-    <color name="jarvis_dock_border">#E2E8F0</color>
-    <color name="jarvis_text_dark">#475569</color>
-    <color name="jarvis_text_muted">#64748B</color>
-    <color name="jarvis_avatar_bg">#EFF6FF</color>
-    <color name="jarvis_input_bg">#FFFFFF</color>
-    <color name="jarvis_chip_bg">#F1F5F9</color>
+    <color name="agent_primary">#2563EB</color>
+    <color name="agent_primary_bright">#2563EB</color>
+    <color name="agent_red_bright">#2563EB</color>
+    <color name="agent_red">#2563EB</color>
+    <color name="agent_primary_dark">#1D4ED8</color>
+    <color name="agent_primary_glow">#332563EB</color>
+    <color name="agent_card_bg">#FFFFFF</color>
+    <color name="agent_card_border">#E2E8F0</color>
+    <color name="agent_dock_bg">#FFFFFF</color>
+    <color name="agent_dock_border">#E2E8F0</color>
+    <color name="agent_text_dark">#475569</color>
+    <color name="agent_text_muted">#64748B</color>
+    <color name="agent_avatar_bg">#EFF6FF</color>
+    <color name="agent_input_bg">#FFFFFF</color>
+    <color name="agent_chip_bg">#F1F5F9</color>
 
     <!-- Legacy compatibility aliases -->
     <color name="naira_red">#2563EB</color>

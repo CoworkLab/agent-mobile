@@ -23,7 +23,7 @@
             android:id="@+id/btnBack"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:background="@drawable/bg_jarvis_icon_square"
+            android:background="@drawable/bg_agent_icon_square"
             android:src="@drawable/ic_back"
             app:tint="?attr/themeTextPrimary"
             android:contentDescription="Back" />
@@ -75,7 +75,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="18dp"
                 android:layout_marginBottom="18dp">
 
@@ -89,7 +89,7 @@
                         android:id="@+id/viewStatusDot"
                         android:layout_width="10dp"
                         android:layout_height="10dp"
-                        android:background="@drawable/bg_jarvis_mic_center"
+                        android:background="@drawable/bg_agent_mic_center"
                         android:backgroundTint="@color/status_green" />
 
                     <TextView
@@ -163,7 +163,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="18dp"
                 android:layout_marginBottom="18dp">
 
@@ -259,7 +259,7 @@
                 android:id="@+id/rgModelGroup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="14dp"
                 android:layout_marginBottom="18dp">
 
@@ -324,7 +324,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="18dp"
                 android:layout_marginBottom="24dp">
 
@@ -388,7 +388,7 @@
             android:id="@+id/btnSaveConnection"
             android:layout_width="match_parent"
             android:layout_height="54dp"
-            android:background="@drawable/bg_jarvis_pill_button"
+            android:background="@drawable/bg_agent_pill_button"
             app:backgroundTint="@null"
             android:text="Save &amp; Apply Configuration"
             android:textColor="#FFFFFF"

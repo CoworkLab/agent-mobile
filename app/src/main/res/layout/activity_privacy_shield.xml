@@ -32,7 +32,7 @@
                     android:id="@+id/btnBack"
                     android:layout_width="44dp"
                     android:layout_height="44dp"
-                    android:background="@drawable/bg_jarvis_icon_square"
+                    android:background="@drawable/bg_agent_icon_square"
                     android:src="@drawable/ic_back"
                     app:tint="?attr/themeTextPrimary"
                     android:contentDescription="Back" />
@@ -68,22 +68,22 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center_horizontal"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="22dp"
                 android:layout_marginBottom="20dp">
 
                 <ImageView
                     android:layout_width="140dp"
                     android:layout_height="48dp"
-                    android:src="@drawable/ic_jarvis_logo"
+                    android:src="@drawable/ic_agent_logo"
                     android:scaleType="fitCenter"
-                    android:contentDescription="Jarvis Logo" />
+                    android:contentDescription="Agent Logo" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:text="System Authorized Jarvis TechGPT X"
+                    android:text="System Authorized Agent Pro"
                     android:textColor="?attr/themeTextPrimary"
                     android:textSize="16sp"
                     android:textStyle="bold"
@@ -104,7 +104,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:background="@drawable/bg_jarvis_status_badge"
+                    android:background="@drawable/bg_agent_status_badge"
                     android:paddingHorizontal="12dp"
                     android:paddingVertical="5dp"
                     android:layout_marginTop="12dp">
@@ -112,7 +112,7 @@
                     <View
                         android:layout_width="6dp"
                         android:layout_height="6dp"
-                        android:background="@drawable/bg_jarvis_mic_center"
+                        android:background="@drawable/bg_agent_mic_center"
                         android:backgroundTint="@color/status_green" />
 
                     <TextView
@@ -143,7 +143,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="20dp"
                 android:layout_marginBottom="20dp">
 
@@ -157,7 +157,7 @@
                     <FrameLayout
                         android:layout_width="44dp"
                         android:layout_height="44dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="24dp"
@@ -250,7 +250,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:padding="20dp"
                 android:layout_marginBottom="24dp">
 
@@ -264,7 +264,7 @@
                     <FrameLayout
                         android:layout_width="44dp"
                         android:layout_height="44dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -326,7 +326,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:paddingTop="6dp"
@@ -341,7 +341,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingVertical="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
@@ -396,7 +396,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingVertical="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
@@ -451,7 +451,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingVertical="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
@@ -506,7 +506,7 @@
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:paddingVertical="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
@@ -555,7 +555,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center"
-                android:text="JARVIS INTELLIGENCE OS • TECHGPT X\nEngineered with complete local privacy &amp; transparency"
+                android:text="MOBILE AGENT\nEngineered with complete local privacy &amp; transparency"
                 android:textColor="?attr/themeTextMuted"
                 android:textSize="11.5sp"
                 android:lineSpacingExtra="3dp"

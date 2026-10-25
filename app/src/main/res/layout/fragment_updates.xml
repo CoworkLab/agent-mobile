@@ -30,7 +30,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Jarvis updates &amp; announcements"
+            android:text="Agent updates &amp; announcements"
             android:textColor="?attr/themeTextMuted"
             android:textSize="13sp"
             android:fontFamily="sans-serif"

@@ -104,7 +104,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_action_card"
+                android:background="@drawable/bg_agent_action_card"
                 android:padding="18dp"
                 android:clickable="true"
                 android:focusable="true"
@@ -123,7 +123,7 @@
                         <ImageView
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:background="@drawable/bg_jarvis_icon_square"
+                            android:background="@drawable/bg_agent_icon_square"
                             android:scaleType="centerInside"
                             android:src="@drawable/ic_user_profile"
                             app:tint="?attr/themeAccent"
@@ -135,7 +135,7 @@
                             android:layout_width="12dp"
                             android:layout_height="12dp"
                             android:layout_gravity="bottom|end"
-                            android:background="@drawable/bg_jarvis_mic_center"
+                            android:background="@drawable/bg_agent_mic_center"
                             android:backgroundTint="@color/status_green" />
                     </FrameLayout>
 
@@ -190,7 +190,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="@drawable/bg_jarvis_status_badge_green"
+                        android:background="@drawable/bg_agent_status_badge_green"
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="5dp"
                         android:layout_marginEnd="8dp">
@@ -221,7 +221,7 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        android:background="@drawable/bg_jarvis_status_badge"
+                        android:background="@drawable/bg_agent_status_badge"
                         android:paddingHorizontal="10dp"
                         android:paddingVertical="5dp">
 
@@ -262,7 +262,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:layout_marginBottom="22dp">
@@ -276,14 +276,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -329,7 +329,7 @@
                         android:textSize="10sp"
                         android:textStyle="bold"
                         android:textColor="@color/status_green"
-                        android:background="@drawable/bg_jarvis_status_badge_green"
+                        android:background="@drawable/bg_agent_status_badge_green"
                         android:paddingHorizontal="8dp"
                         android:paddingVertical="3dp"
                         android:layout_marginEnd="8dp" />
@@ -356,14 +356,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -423,14 +423,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -461,7 +461,7 @@
                             android:id="@+id/tvCurrentPersona"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Jarvis Pro • Voice: Puck"
+                            android:text="Agent Pro • Voice: Puck"
                             android:textColor="?attr/themeTextMuted"
                             android:textSize="12sp"
                             android:fontFamily="sans-serif"
@@ -492,12 +492,12 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item">
+                    android:background="@drawable/bg_agent_row_item">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -558,7 +558,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:layout_marginBottom="22dp">
@@ -572,14 +572,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -639,14 +639,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -705,14 +705,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -771,14 +771,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
                         <ImageView
                             android:layout_width="22dp"
                             android:layout_height="22dp"
@@ -832,14 +832,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -901,7 +901,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:background="@drawable/bg_jarvis_card"
+                android:background="@drawable/bg_agent_card"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:layout_marginBottom="24dp">
@@ -915,14 +915,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -982,14 +982,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
 
                         <ImageView
                             android:layout_width="22dp"
@@ -1047,14 +1047,14 @@
                     android:gravity="center_vertical"
                     android:paddingTop="14dp"
                     android:paddingBottom="14dp"
-                    android:background="@drawable/bg_jarvis_row_item"
+                    android:background="@drawable/bg_agent_row_item"
                     android:clickable="true"
                     android:focusable="true">
 
                     <FrameLayout
                         android:layout_width="40dp"
                         android:layout_height="40dp"
-                        android:background="@drawable/bg_jarvis_icon_square">
+                        android:background="@drawable/bg_agent_icon_square">
                         <ImageView
                             android:layout_width="22dp"
                             android:layout_height="22dp"
@@ -1108,7 +1108,7 @@
                     android:id="@+id/btnSocialTelegram"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:background="@drawable/bg_jarvis_icon_square"
+                    android:background="@drawable/bg_agent_icon_square"
                     android:src="@drawable/ic_social_telegram"
                     app:tint="?attr/themeAccent"
                     android:layout_marginEnd="12dp"
@@ -1118,7 +1118,7 @@
                     android:id="@+id/btnSocialInstagram"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:background="@drawable/bg_jarvis_icon_square"
+                    android:background="@drawable/bg_agent_icon_square"
                     android:src="@drawable/ic_social_instagram"
                     app:tint="?attr/themeAccent"
                     android:layout_marginEnd="12dp"
@@ -1128,7 +1128,7 @@
                     android:id="@+id/btnSocialYoutube"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
-                    android:background="@drawable/bg_jarvis_icon_square"
+                    android:background="@drawable/bg_agent_icon_square"
                     android:src="@drawable/ic_social_youtube"
                     app:tint="?attr/themeAccent"
                     android:contentDescription="YouTube" />
@@ -1139,7 +1139,7 @@
                 android:id="@+id/tvFooterCredit"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="JARVIS INTELLIGENCE OS • v3.1 PRO\nEngineered by TechGPT X"
+                android:text="MOBILE AGENT • v3.1 PRO\nEngineered by Pro"
                 android:textColor="?attr/themeTextMuted"
                 android:textSize="12sp"
                 android:fontFamily="sans-serif-medium"
