@@ -8,17 +8,16 @@ import java.security.MessageDigest
 import kotlin.system.exitProcess
 
 /**
- * JARVIS ASSISTANT — SECURITY MODULE
- * Developer       : Mobile Agent
- * Copyright © 2026: Mobile Agent. All Rights Reserved.
- * GitHub          : https://github.com/techgptx/Playlist
+ * Mobile Agent — Security Module
+ * Package integrity and runtime safety checks.
+ * Project: https://github.com/CoworkLab/agent-mobile
  */
 object SecurityManager {
 
     const val DEVELOPER_NAME    = "Mobile Agent"
-    const val COPYRIGHT_NOTICE  = "Copyright © 2026 Mobile Agent. All Rights Reserved."
-    const val GITHUB_REPO       = "https://github.com/techgptx/Playlist"
-    const val LICENSE_NAME      = "TAMCL v1.0 — Content creators MUST credit Mobile Agent"
+    const val COPYRIGHT_NOTICE  = "© 2026 Mobile Agent Project"
+    const val GITHUB_REPO       = "https://github.com/CoworkLab/agent-mobile"
+    const val LICENSE_NAME      = "Open source — see LICENSE"
 
     private const val EXPECTED_PACKAGE = "com.mobileagent.app"
 
@@ -31,7 +30,7 @@ object SecurityManager {
             showTamperAlert(
                 context,
                 "Clone Detected",
-                "This is an unauthorised clone of the JARVIS app by $DEVELOPER_NAME.\n\n" +
+                "This is an unauthorised clone of the Agent app by $DEVELOPER_NAME.\n\n" +
                 "Original: $EXPECTED_PACKAGE\n" +
                 "Found   : ${context.packageName}\n\n" +
                 "The app will now close. Please download the official version from:\n$GITHUB_REPO"

@@ -153,7 +153,7 @@ class MainActivity : AppCompatActivity() {
         if (!com.mobileagent.app.security.AppIdentityVerifier.isTrustedRelease(this)) {
             MaterialAlertDialogBuilder(this)
                 .setTitle("App integrity check failed")
-                .setMessage("This JARVIS build is not signed with the configured official release certificate. Sensitive features have been blocked.")
+                .setMessage("This Agent build is not signed with the configured official release certificate. Sensitive features have been blocked.")
                 .setCancelable(false)
                 .setPositiveButton("Close") { _, _ -> finish() }
                 .show()
@@ -206,7 +206,7 @@ class MainActivity : AppCompatActivity() {
                     selectTab(TAB_HOME)
                 } else {
                     // Preserve Android's normal root behavior (return to launcher) only
-                    // after the user is already on JARVIS Home.
+                    // after the user is already on Agent Home.
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
                     isEnabled = true

@@ -145,7 +145,7 @@
                     app:backgroundTint="?attr/themeAccent" />
             </LinearLayout>
 
-            <!-- SECTION 1: HOW JARVIS WORKS (NON-DEVELOPER GUIDE) -->
+            <!-- SECTION 1: HOW Agent WORKS (NON-DEVELOPER GUIDE) -->
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

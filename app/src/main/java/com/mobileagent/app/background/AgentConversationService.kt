@@ -524,7 +524,7 @@ class AgentConversationService : Service() {
                 val shown = taskProgressOverlay?.update(snapshot, showIdleAvatar) == true
                 if (snapshot != null && !shown && overlayPermissionWarningTaskId != snapshot.taskId) {
                     overlayPermissionWarningTaskId = snapshot.taskId
-                    _events.emit("Task progress is shown inside JARVIS Home. Allow Display over other apps if you want the floating task panel over Instagram, Spotify, and Chrome.")
+                    _events.emit("Task progress is shown inside Agent Home. Allow Display over other apps if you want the floating task panel over Instagram, Spotify, and Chrome.")
                 }
             }
         }
@@ -2074,7 +2074,7 @@ class AgentConversationService : Service() {
                             is com.mobileagent.app.util.ContactCaller.CallResult.Success -> Pair(true, "Calling ${callResult.contact.name}.")
                             is com.mobileagent.app.util.ContactCaller.CallResult.NoMatch -> Pair(false, "Could not find contact $contact.")
                             is com.mobileagent.app.util.ContactCaller.CallResult.MultipleMatches -> Pair(false, "Multiple contacts found for $contact.")
-                            is com.mobileagent.app.util.ContactCaller.CallResult.MissingContactsPermission -> Pair(false, "Contacts permission is not granted, so JARVIS cannot look up that saved contact.")
+                            is com.mobileagent.app.util.ContactCaller.CallResult.MissingContactsPermission -> Pair(false, "Contacts permission is not granted, so Agent cannot look up that saved contact.")
                             is com.mobileagent.app.util.ContactCaller.CallResult.MissingCallPermission -> Pair(false, "Phone call permission is not granted.")
                             is com.mobileagent.app.util.ContactCaller.CallResult.CallFailed -> Pair(false, "Could not place phone call.")
                         }
@@ -2128,7 +2128,7 @@ class AgentConversationService : Service() {
                             minimizeToHomeScreen()
                             enterStandby(announce = false)
                             result.put("success", true)
-                            result.put("message", "Sent JARVIS to background standby mode.")
+                            result.put("message", "Sent Agent to background standby mode.")
                         }
                     }
 
@@ -3387,9 +3387,9 @@ class AgentConversationService : Service() {
         val app = application as? AgentApp
         val movedBack = app?.moveAppToBack() == true
         if (movedBack) {
-            Log.i("AgentService", "JARVIS foreground activity moved to back safely")
+            Log.i("AgentService", "Agent foreground activity moved to back safely")
         } else {
-            Log.i("AgentService", "JARVIS going to background standby; leaving active foreground app intact")
+            Log.i("AgentService", "Agent going to background standby; leaving active foreground app intact")
         }
     }
 

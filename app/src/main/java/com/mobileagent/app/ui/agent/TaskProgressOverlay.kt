@@ -47,12 +47,12 @@ class TaskProgressOverlay(private val context: Context) {
         elevation = dp(12).toFloat()
     }
     private val header = TextView(context).apply {
-        text = "JARVIS  ⋮⋮"
+        text = "Agent  ⋮⋮"
         setTextColor(Color.rgb(215, 220, 228))
         textSize = 10f
         typeface = android.graphics.Typeface.DEFAULT_BOLD
         setPadding(0, 0, 0, dp(5))
-        contentDescription = "Drag JARVIS task overlay anywhere on screen"
+        contentDescription = "Drag Agent task overlay anywhere on screen"
     }
     private val title = label(11f, true).apply { maxLines = 1 }
     private val progressText = label(11f, true).apply {
@@ -210,7 +210,7 @@ class TaskProgressOverlay(private val context: Context) {
     }
 
     private fun renderIdle() {
-        title.text = "JARVIS"
+        title.text = "Agent"
         stepRows.removeAllViews()
         stepRows.addView(label(9f, false).apply { text = "Ready · Double-tap for task status" }, matchWrap())
         progress.visibility = View.GONE

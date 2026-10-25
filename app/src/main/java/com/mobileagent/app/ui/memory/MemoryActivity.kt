@@ -246,7 +246,7 @@ class MemoryActivity : AppCompatActivity() {
     private fun confirmDeleteMemory(memory: MemoryEntity) {
         MaterialAlertDialogBuilder(this)
             .setTitle("Delete Memory")
-            .setMessage("Are you sure you want JARVIS to forget this fact?\n\n\"${memory.rawText}\"")
+            .setMessage("Are you sure you want Agent to forget this fact?\n\n\"${memory.rawText}\"")
             .setPositiveButton("DELETE") { _, _ ->
                 lifecycleScope.launch {
                     memoryRepo.deleteMemoryById(memory.id)

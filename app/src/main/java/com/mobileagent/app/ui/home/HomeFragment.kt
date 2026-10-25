@@ -290,7 +290,7 @@ class HomeFragment : Fragment() {
 
     private fun updateHomeHeaderAndVoiceStatus() {
         if (_binding == null) return
-        val userName = preferences.userName.ifBlank { "Rehaan" }
+        val userName = preferences.userName.ifBlank { "You" }
         val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
         val timeGreeting = when (hour) {
             in 4..11 -> "Good morning"
@@ -356,7 +356,7 @@ class HomeFragment : Fragment() {
                     }.collect { status ->
                         if (!status.isOn) {
                             setOrbState("idle")
-                            binding.tvListeningStatus.text = "JARVIS OFF • TAP TO START"
+                            binding.tvListeningStatus.text = "Agent OFF • TAP TO START"
                             binding.tvListeningStatus.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_subtle))
                             binding.tvHoldHint.text = "Tap mic or orb to power on"
                             binding.tvHoldHint.visibility = View.VISIBLE
@@ -374,7 +374,7 @@ class HomeFragment : Fragment() {
                             )
                         } else if (status.isStandby) {
                             setOrbState("idle")
-                            binding.tvListeningStatus.text = "STANDBY • SAY 'HEY JARVIS'"
+                            binding.tvListeningStatus.text = "STANDBY • SAY 'HEY Agent'"
                             binding.tvListeningStatus.setTextColor(Color.parseColor("#3B82F6"))
                             binding.tvHoldHint.text = "Listening for wake word • Hold mic to power off"
                             binding.tvHoldHint.visibility = View.VISIBLE
@@ -395,7 +395,7 @@ class HomeFragment : Fragment() {
                                 }
                                 ConversationState.SPEAKING -> {
                                     setOrbState("speaking")
-                                    binding.tvListeningStatus.text = "JARVIS SPEAKING..."
+                                    binding.tvListeningStatus.text = "Agent SPEAKING..."
                                     binding.tvListeningStatus.setTextColor(Color.parseColor("#06B6D4"))
                                     binding.tvHoldHint.text = "Tap mic to interrupt"
                                     binding.dotStatusGlow.backgroundTintList = ColorStateList.valueOf(
@@ -551,7 +551,7 @@ class HomeFragment : Fragment() {
             visibility = View.GONE
         }
         panel.addView(android.widget.TextView(requireContext()).apply {
-            text = "JARVIS AGENT PROGRESS"
+            text = "Agent AGENT PROGRESS"
             textSize = 11f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
             setTextColor(android.graphics.Color.rgb(103, 232, 249))
@@ -573,7 +573,7 @@ class HomeFragment : Fragment() {
                         android.net.Uri.parse("package:${requireContext().packageName}")
                     ))
                 } catch (_: Exception) {
-                    android.widget.Toast.makeText(requireContext(), "Open Android Settings → Apps → JARVIS → Display over other apps.", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(requireContext(), "Open Android Settings → Apps → Agent → Display over other apps.", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
         }, android.widget.LinearLayout.LayoutParams(-2, dp(44)))

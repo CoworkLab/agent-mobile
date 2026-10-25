@@ -44,7 +44,7 @@ data class AgentTaskSnapshot(
 )
 
 /**
- * Core models for the JARVIS True Agentic Task Engine.
+ * Core models for the Agent True Agentic Task Engine.
  * Enforces structured planning, execution, verification, and state tracking.
  */
 

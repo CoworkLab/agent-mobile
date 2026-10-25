@@ -64,9 +64,9 @@ class SettingsFragment : Fragment() {
     }
 
     private fun loadUserData() {
-        val userName = preferences.userName.ifBlank { "Rehaan" }
+        val userName = preferences.userName.ifBlank { "You" }
         binding.tvProfileName.text = userName
-        binding.tvProfileSubtitle.text = "JARVIS OPERATOR • PRIMARY USER"
+        binding.tvProfileSubtitle.text = "OPERATOR • PRIMARY USER"
 
         // Owner Voice Profile Status
         val hasVoiceProfile = preferences.hasOwnerVoiceProfile()
@@ -184,7 +184,7 @@ class SettingsFragment : Fragment() {
 
         binding.rowAppIdentity.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext())
-                .setTitle("JARVIS App Identity")
+                .setTitle("Agent App Identity")
                 .setMessage(com.mobileagent.app.security.AppIdentityVerifier.report(requireContext()))
                 .setPositiveButton("Close", null)
                 .show()
@@ -242,7 +242,7 @@ class SettingsFragment : Fragment() {
 
     private fun showEditNameDialog() {
         val input = EditText(requireContext()).apply {
-            setText(preferences.userName.ifBlank { "Rehaan" })
+            setText(preferences.userName.ifBlank { "You" })
             setSelection(text.length)
         }
         MaterialAlertDialogBuilder(requireContext())

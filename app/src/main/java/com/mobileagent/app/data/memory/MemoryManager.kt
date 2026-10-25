@@ -245,7 +245,7 @@ class MemoryManager(
             return mostPlayed
         }
 
-        return "Tadipaar"
+        return ""
     }
 
     /**
@@ -455,7 +455,7 @@ class MemoryManager(
                 val j = turn.agentResponse.trim()
                 if (u.isNotBlank() && j.isNotBlank() && u != "(Audio query)" && j != "(Audio response)") {
                     sb.append("User: \"$u\"\n")
-                    sb.append("JARVIS: \"$j\"\n")
+                    sb.append("Agent: \"$j\"\n")
                 }
             }
         }

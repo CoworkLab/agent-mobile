@@ -1164,7 +1164,7 @@ class VisualTaskOrchestrator(
                 if (screenCaptureManager.isScreenShareActive()) {
                     "$product's prompt field is not exposed to accessibility. Screen Share is enabled, but Android has not delivered a fresh frame yet; wait for the preview to update and retry once."
                 } else {
-                    "$product's prompt field is not exposed to accessibility and no visual frame is available. Enable Screen Share once, then JARVIS can target the visible prompt field."
+                    "$product's prompt field is not exposed to accessibility and no visual frame is available. Enable Screen Share once, then Agent can target the visible prompt field."
                 }
             } else {
                 "$product's prompt field could not be identified from the current frame. Keep the editor/composer visible and inspect the screen before retrying."
