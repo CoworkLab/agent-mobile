@@ -167,10 +167,8 @@ object NodeTools {
                 val action = when (dir) {
                     "forward", "down" -> AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
                     "backward", "up" -> AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
-                    "left" -> if (Build.VERSION.SDK_INT >= 23) AccessibilityNodeInfo.ACTION_SCROLL_LEFT
-                              else AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
-                    "right" -> if (Build.VERSION.SDK_INT >= 23) AccessibilityNodeInfo.ACTION_SCROLL_RIGHT
-                               else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
+                    "left" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_LEFT.id
+                    "right" -> AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_RIGHT.id
                     else -> AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
                 }
                 val did = node.performAction(action)
@@ -184,7 +182,7 @@ object NodeTools {
                     "expand" -> node.performAction(AccessibilityNodeInfo.ACTION_EXPAND)
                     "collapse" -> node.performAction(AccessibilityNodeInfo.ACTION_COLLAPSE)
                     "dismiss" -> node.performAction(AccessibilityNodeInfo.ACTION_DISMISS)
-                    "show_on_screen" -> node.performAction(AccessibilityNodeInfo.ACTION_SHOW_ON_SCREEN)
+                    "show_on_screen" -> node.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
                     "clear_focus" -> node.performAction(AccessibilityNodeInfo.ACTION_CLEAR_FOCUS)
                     "clear_selection" -> node.performAction(AccessibilityNodeInfo.ACTION_CLEAR_SELECTION)
                     else -> throw ToolException("Unknown node_action '$action'.")
@@ -194,7 +192,7 @@ object NodeTools {
             "press_enter" -> {
                 val focused = findFocusedEditable(root)
                 if (focused != null && Build.VERSION.SDK_INT >= 30 &&
-                    focused.performAction(AccessibilityNodeInfo.ACTION_IME_ENTER)
+                    focused.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id)
                 ) {
                     return ctx.ok("pressed" to true, "via" to "ime_action")
                 }
@@ -214,7 +212,7 @@ object NodeTools {
         }
     }
 
-    fun setNodeText(node: AccessibilityNodeInfo, text: String, append: Boolean): Boolean {
+    suspend fun setNodeText(node: AccessibilityNodeInfo, text: String, append: Boolean): Boolean {
         if (!NodeQuery.editable(node)) {
             // Try the closest editable child/descendant.
             val editableChild = firstEditableDescendant(node)

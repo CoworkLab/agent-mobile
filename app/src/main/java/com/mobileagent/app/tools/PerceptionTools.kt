@@ -260,12 +260,14 @@ object PerceptionTools {
     }
 
     /** Try MediaProjection first, then the Android 11+ accessibility screenshot. */
-    private fun captureJpeg(ctx: ToolContext): ByteArray? {
+    private suspend fun captureJpeg(ctx: ToolContext): ByteArray? {
         val projection = com.mobileagent.app.vision.ScreenCaptureManager.getInstance()
         if (projection.hasRecentFrame()) {
             projection.captureSnapshotJpeg(quality = 70)?.let { return it }
         }
-        return ctx.accessibility?.captureScreenJpeg(quality = 70)
+        return if (ctx.accessibility != null) {
+            com.mobileagent.app.automation.accessibility.AgentAccessibilityService.captureScreenJpeg(quality = 70)
+        } else null
     }
 }
 

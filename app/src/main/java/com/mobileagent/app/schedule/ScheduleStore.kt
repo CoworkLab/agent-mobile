@@ -96,8 +96,8 @@ object ScheduleStore {
     }
 
     private fun deliver(context: Context, task: Task) {
-        val intent = Intent(context, com.mobileagent.app.AgentConversationService::class.java).apply {
-            action = com.mobileagent.app.AgentConversationService.ACTION_SCHEDULED_TASK
+        val intent = Intent(context, com.mobileagent.app.background.AgentConversationService::class.java).apply {
+            action = com.mobileagent.app.background.AgentConversationService.ACTION_SCHEDULED_TASK
             putExtra("instruction", task.instruction)
         }
         runCatching {

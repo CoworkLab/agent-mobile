@@ -99,7 +99,7 @@ class AgentNotificationListener : NotificationListenerService() {
 
     companion object {
         private const val MAX = 60
-        private val lock = Object()
+        private val lock = java.util.concurrent.locks.ReentrantLock()
         private val latest = LinkedHashMap<String, Captured>()
 
         @Volatile
@@ -111,10 +111,14 @@ class AgentNotificationListener : NotificationListenerService() {
         private var instance: AgentNotificationListener? = null
 
         fun snapshot(): List<Captured> {
-            synchronized(lock) { return latest.values.sortedByDescending { it.postedAt }.toList() }
+            lock.lock()
+            return try { latest.values.sortedByDescending { it.postedAt }.toList() } finally { lock.unlock() }
         }
 
-        fun byId(id: String): Captured? = synchronized(lock) { latest[id] }
+        fun byId(id: String): Captured? {
+            lock.lock()
+            return try { latest[id] } finally { lock.unlock() }
+        }
 
         fun dismiss(n: Captured): Boolean {
             val svc = instance ?: return false

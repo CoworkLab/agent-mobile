@@ -27,6 +27,13 @@ import java.util.Locale
  */
 object SystemTools {
 
+    /**
+     * Stable Settings intent contract ("android.settings.NOTIFICATION_SETTINGS", public since API 9).
+     * The platform-34 compile stub omits this one constant, so it is mirrored here; the value is
+     * fixed by Android's public intent contract and cannot drift across devices.
+     */
+    private const val ACTION_NOTIFICATION_SETTINGS = "android.settings.NOTIFICATION_SETTINGS"
+
     val NAMES: Set<String> = setOf(
         "list_installed_apps", "open_url", "send_intent", "open_settings", "set_dnd",
         "wake_screen", "install_apk", "uninstall_app", "get_battery", "get_network_status",
@@ -196,7 +203,7 @@ object SystemTools {
                     "apps" -> Settings.ACTION_APPLICATION_SETTINGS
                     "app_details" -> Settings.ACTION_APPLICATION_DETAILS_SETTINGS
                     "accessibility" -> Settings.ACTION_ACCESSIBILITY_SETTINGS
-                    "notifications" -> Settings.ACTION_NOTIFICATION_SETTINGS
+                    "notifications" -> ACTION_NOTIFICATION_SETTINGS
                     "location" -> Settings.ACTION_LOCATION_SOURCE_SETTINGS
                     "storage" -> Settings.ACTION_INTERNAL_STORAGE_SETTINGS
                     "security" -> Settings.ACTION_SECURITY_SETTINGS

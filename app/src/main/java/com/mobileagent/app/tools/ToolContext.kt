@@ -6,7 +6,7 @@ import android.content.Context
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
 import com.mobileagent.app.AgentApp
-import com.mobileagent.app.AgentConversationService
+import com.mobileagent.app.background.AgentConversationService
 import com.mobileagent.app.automation.accessibility.AgentAccessibilityService
 import org.json.JSONObject
 
@@ -14,6 +14,8 @@ import org.json.JSONObject
 class ToolException(message: String) : Exception(message)
 
 fun Rect.shortString(): String = "[${left},${top} ${right}x${bottom}]"
+
+fun AccessibilityNodeInfo.boundsInScreen(): Rect = Rect().also { getBoundsInScreen(it) }
 
 /**
  * Everything a tool needs at execution time. Created per dispatch by the conversation service.
@@ -42,7 +44,7 @@ class ToolContext(
         )
 
     fun screenBounds(): Rect {
-        val r = root?.bounds
+        val r = root?.boundsInScreen()
         if (r != null && r.width() > 0 && r.height() > 0) return r
         val metrics = context.resources.displayMetrics
         return Rect(0, 0, metrics.widthPixels, metrics.heightPixels)
@@ -153,7 +155,7 @@ object NodeQuery {
             n.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let { o.put("desc", it.take(120)) }
             n.viewIdResourceName?.let { o.put("id_res", it.substringAfterLast('/')) }
             n.className?.toString()?.substringAfterLast('.')?.let { o.put("cls", it) }
-            o.put("b", n.bounds.shortString())
+            o.put("b", n.boundsInScreen().shortString())
             if (n.isClickable) o.put("click", true)
             if (n.isLongClickable) o.put("long", true)
             if (n.isScrollable) o.put("scroll", true)
@@ -164,7 +166,7 @@ object NodeQuery {
             o.put("text", n.text?.toString() ?: "")
             o.put("desc", n.contentDescription?.toString() ?: "")
             o.put("cls", n.className?.toString() ?: "")
-            o.put("bounds", n.bounds.shortString())
+            o.put("bounds", n.boundsInScreen().shortString())
             o.put("clickable", n.isClickable)
             o.put("scrollable", n.isScrollable)
             o.put("editable", editable(n))
@@ -175,7 +177,19 @@ object NodeQuery {
     }
 
     fun center(n: AccessibilityNodeInfo): android.graphics.Point {
-        val r = n.bounds
+        val r = n.boundsInScreen()
         return android.graphics.Point(r.centerX(), r.centerY())
+    }
+
+    /** One-line human-readable description of a node for tool result messages. */
+    fun nodeSummary(n: AccessibilityNodeInfo): String {
+        val text = n.text?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.take(60)
+        val desc = n.contentDescription?.toString()?.trim()?.takeIf { it.isNotEmpty() }?.take(60)
+        val cls = n.className?.toString()?.substringAfterLast('.')
+        return listOfNotNull(
+            text?.let { "text=\"$it\"" },
+            desc?.let { "desc=\"$it\"" },
+            cls?.let { "class=$it" }
+        ).joinToString(" ").ifBlank { "node#${System.identityHashCode(n)}" }
     }
 }

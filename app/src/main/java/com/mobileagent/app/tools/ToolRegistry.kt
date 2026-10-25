@@ -32,6 +32,9 @@ object ToolRegistry {
 
     fun t(name: String, desc: String, params: List<P> = emptyList()) = T(name, desc, params)
 
+    /** Vararg overload: t("name", "desc", p(...), p(...)) without wrapping in listOf. */
+    fun t(name: String, desc: String, vararg params: P) = T(name, desc, params.toList())
+
     // ---- kept legacy tools (executed by the battle-tested service handlers) ----
 
     private val legacyTools: List<T> = listOf(

@@ -27,7 +27,7 @@ object TtsSpeaker {
             ready.await(4, java.util.concurrent.TimeUnit.SECONDS)
         }
         val tts = engine.get() ?: return false
-        if (language.isNotBlank()) {
+        if (!language.isNullOrBlank()) {
             runCatching {
                 val locale = Locale.forLanguageTag(language)
                 if (tts.isLanguageAvailable(locale) >= TextToSpeech.LANG_AVAILABLE) tts.language = locale

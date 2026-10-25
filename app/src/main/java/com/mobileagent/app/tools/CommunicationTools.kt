@@ -387,12 +387,12 @@ object CommunicationTools {
         val cleaned = value.trim().replace("Z", "+0000")
         val patterns = listOf("yyyy-MM-dd'T'HH:mm:ss", "yyyy-MM-dd HH:mm:ss", "yyyy-MM-dd'T'HH:mm", "yyyy-MM-dd HH:mm", "yyyy-MM-dd")
         for (p in patterns) {
-            runCatching {
+            val d = runCatching {
                 val fmt = SimpleDateFormat(p, Locale.US)
                 fmt.isLenient = false
-                val d = fmt.parse(cleaned) ?: continue
-                return Calendar.getInstance().apply { time = d }
-            }
+                fmt.parse(cleaned)
+            }.getOrNull() ?: continue
+            return Calendar.getInstance().apply { time = d }
         }
         throw ToolException("Could not parse datetime '$value'. Use ISO format like 2026-01-01T09:00:00.")
     }

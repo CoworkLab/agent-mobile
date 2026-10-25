@@ -181,9 +181,9 @@ object GestureTools {
                     p2.moveTo((cx - half / 3).toFloat(), cy.toFloat()); p2.lineTo((cx + half).toFloat(), cy.toFloat())
                 }
                 val b = GestureDescription.Builder()
-                b.addStroke(stroke(p1, 450L))
-                b.addStroke(stroke(p2, 450L))
-                dispatch(svc, b)
+                b.addStroke(strokeDesc(p1, 450L))
+                b.addStroke(strokeDesc(p2, 450L))
+                dispatch(svc, b.build())
                 delay(250)
                 ctx.ok("action" to "pinch", "mode" to mode)
             }
@@ -243,6 +243,10 @@ object GestureTools {
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
             .build()
 
+    /** Raw stroke for combining several simultaneous fingers (e.g. pinch). */
+    private fun strokeDesc(path: Path, durationMs: Long): GestureDescription.StrokeDescription =
+        GestureDescription.StrokeDescription(path, 0, durationMs)
+
     /**
      * Sequential strokes from one finger: each begins after the previous one ends (plus gapMs).
      * Only the FINAL stroke may keep `willContinue = false`; every earlier stroke must mark
@@ -270,10 +274,10 @@ object GestureTools {
         val completed = java.util.concurrent.atomic.AtomicBoolean(false)
         val latch = java.util.concurrent.CountDownLatch(1)
         val accepted = svc.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
-            override fun onCompleted(g: GestureDescription?, callback: android.os.CancellationSignal?) {
+            override fun onCompleted(gestureDescription: GestureDescription?) {
                 completed.set(true); latch.countDown()
             }
-            override fun onCancelled(g: GestureDescription?, callback: android.os.CancellationSignal?) {
+            override fun onCancelled(gestureDescription: GestureDescription?) {
                 completed.set(false); latch.countDown()
             }
         }, null)

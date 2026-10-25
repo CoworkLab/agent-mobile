@@ -12,7 +12,7 @@ import android.speech.SpeechRecognizer
 import android.speech.RecognizerIntent
 import android.speech.RecognitionListener
 import android.provider.MediaStore
-import com.mobileagent.app.AgentConversationService as AgentConversationServiceRef
+import com.mobileagent.app.background.AgentConversationService as AgentConversationServiceRef
 import com.mobileagent.app.audio.TtsSpeaker
 import com.mobileagent.app.audio.VoiceListener
 import kotlinx.coroutines.delay
@@ -278,12 +278,11 @@ private object CameraSnap {
                     d.createCaptureSession(listOf(surface), object : android.hardware.camera2.CameraCaptureSession.StateCallback() {
                         override fun onConfigured(s: android.hardware.camera2.CameraCaptureSession) {
                             runCatching {
-                                val req = d.createCaptureRequest(android.hardware.camera2.CameraDevice.TEMPLATE_STILL_CAPTURE)
-                                    .addTarget(surface)
-                                    .set(android.hardware.camera2.CaptureRequest.CONTROL_MODE,
-                                         android.hardware.camera2.CaptureRequest.CONTROL_MODE_AUTO)
-                                    .build()
-                                s.capture(req, null, null)
+                                val reqBuilder = d.createCaptureRequest(android.hardware.camera2.CameraDevice.TEMPLATE_STILL_CAPTURE)
+                                reqBuilder.addTarget(surface)
+                                reqBuilder.set(android.hardware.camera2.CaptureRequest.CONTROL_MODE,
+                                    android.hardware.camera2.CaptureRequest.CONTROL_MODE_AUTO)
+                                s.capture(reqBuilder.build(), null, null)
                             }.onFailure { latch.countDown() }
                         }
                         override fun onConfigureFailed(s: android.hardware.camera2.CameraCaptureSession) { latch.countDown() }
