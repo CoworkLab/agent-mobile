@@ -29,6 +29,8 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.mobileagent.app.AgentApp
 import com.mobileagent.app.audio.VoskModelManager
+import com.mobileagent.app.tools.ToolContext
+import com.mobileagent.app.tools.ToolRegistry
 import org.json.JSONObject
 import org.vosk.Recognizer
 import org.vosk.android.RecognitionListener as VoskRecognitionListener
@@ -91,6 +93,20 @@ class AgentConversationService : Service() {
         const val ACTION_START_CONVERSATION = "com.mobileagent.app.START_CONVERSATION"
         const val ACTION_STOP_ALL = "com.mobileagent.app.STOP_ALL"
         const val ACTION_ENTER_STANDBY = "com.mobileagent.app.ENTER_STANDBY"
+        const val ACTION_SCHEDULED_TASK = "com.mobileagent.app.SCHEDULED_TASK"
+
+        /** Screen-mutating tools covered by autonomous-loop bookkeeping and the hard-stop guard. */
+        private val AUTOMATION_TOOL_NAMES = setOf(
+            "open_app", "open_website", "search_in_chrome", "click_ui_element", "type_text", "scroll_screen", "press_key",
+            "tap", "double_tap", "long_press", "swipe", "fling", "scroll", "scroll_until_found",
+            "drag_and_drop", "pinch", "custom_gesture",
+            "click_node", "long_click_node", "set_text", "focus_node", "select_text",
+            "text_action", "scroll_node", "node_action", "press_enter",
+            "open_url", "send_intent", "open_settings", "toggle_flashlight", "set_dnd", "wake_screen",
+            "install_apk", "uninstall_app", "send_sms", "make_call", "end_call",
+            "share_content", "send_email", "create_event", "set_alarm", "set_timer",
+            "notification_action", "write_file", "delete_file", "download_file", "take_photo", "record_audio"
+ )
 
         private const val CHANNEL_ID = "agent_conversation"
         private const val NOTIFICATION_ID = 41
@@ -661,7 +677,22 @@ class AgentConversationService : Service() {
         ensureMicrophoneForegroundService()
         acquireWakeLock()
 
-        when (intent?.action) {
+                when (intent?.action) {
+            ACTION_SCHEDULED_TASK -> {
+                val instruction = intent?.getStringExtra("instruction").orEmpty()
+                if (instruction.isNotBlank()) {
+                    Log.i("AgentService", "Scheduled task fired: $instruction")
+                    if (_isSessionOn.value) {
+                        sendTextMessage(instruction)
+                    } else {
+                        beginActiveConversation()
+                        serviceScope.launch(Dispatchers.Main) {
+                            delay(6_000)
+                            sendTextMessage(instruction)
+                        }
+                    }
+                }
+            }
             ACTION_START_CONVERSATION -> {
                 com.mobileagent.app.audio.AgentSoundEffects.playWakeSound()
                 beginActiveConversation()
@@ -1600,6 +1631,20 @@ class AgentConversationService : Service() {
      * Executes a tool call from Gemini. Called both from the direct onToolCall path
      * (when owner is already verified) and from processPendingToolCalls (after verification completes).
      */
+    /** Publishes a visible event line to the UI event flow (ask_user, plans, notices). */
+    fun postAgentEvent(text: String) {
+        serviceScope.launch { _events.emit(text) }
+    }
+
+    /** Forwards a captured frame to the model through the live vision channel. */
+    fun pushVisionFrame(jpegBytes: ByteArray): Boolean {
+        val ws = liveWebSocket ?: return false
+        return runCatching {
+            ws.sendMediaChunk(jpegBytes)
+            true
+        }.getOrDefault(false)
+    }
+
     private fun handleToolCallExecution(callId: String, name: String, args: JSONObject) {
         val job = serviceScope.launch(Dispatchers.IO) {
             val thisJob = coroutineContext[Job]
@@ -1612,14 +1657,19 @@ class AgentConversationService : Service() {
                         withTimeout(automationToolTimeoutMs()) {
                             val app = application as? AgentApp ?: return@withTimeout
 
+                // Argument aliases: newer tool schemas map onto legacy handler argument names.
+                if (name == "open_app" && !args.has("app_name") && args.has("app")) {
+                    args.put("app_name", args.optString("app"))
+                }
+                if ((name == "set_volume" || name == "set_brightness") && !args.has("percentage") && args.has("level_percent")) {
+                    args.put("percentage", args.optInt("level_percent"))
+                }
+
                 hasExecutedCommandInCurrentTurn = true
                 lastCommandExecutionTime = System.currentTimeMillis()
                 suppressAudioUntilTurnComplete = false
 
-                val isAutomationTool = name in setOf(
-                    "open_app", "open_website", "search_in_chrome",
-                    "click_ui_element", "type_text", "scroll_screen", "press_key"
-                )
+                val isAutomationTool = name in AUTOMATION_TOOL_NAMES
                 if (isAutomationTool && autonomousHardStop) {
                     Log.w("AgentService", "Automation tool '$name' refused: hard stop is active.")
                     liveWebSocket?.sendToolResponse(callId, name, JSONObject().apply {
@@ -1659,6 +1709,14 @@ class AgentConversationService : Service() {
                         autonomousStepCount++
                         Log.i("AgentService", "Autonomous task advancing to step $autonomousStepCount")
                     }
+                }
+
+                // New tool framework: perception, gestures, node actions, global actions,
+                // system, communication, media/files, web and agent-core tools.
+                if (ToolRegistry.handles(name)) {
+                    val registryResult = ToolRegistry.dispatch(name, args, ToolContext(app, this))
+                    liveWebSocket?.sendToolResponse(callId, name, registryResult)
+                    return@withTimeout
                 }
 
                 if (name in setOf("click_ui_element", "type_text", "scroll_screen", "press_key")) {
@@ -2219,7 +2277,7 @@ class AgentConversationService : Service() {
                         result.put("message", actionRes.message)
                     }
 
-                    "task_completed" -> {
+                    "task_completed", "done" -> {
                         val summary = args.optString("summary", "Task completed.")
                         if (!isAutonomousTaskRunning &&
                             (!lastCompletedTaskSummary.isNullOrBlank() || System.currentTimeMillis() - lastVerifiedCompletionAt < 15_000L)
@@ -3039,10 +3097,22 @@ class AgentConversationService : Service() {
         "ok agent",
         "okay agent",
         "wake up agent",
+        "agent wake up",
+        "mobile agent",
         "sun agent",
         "suno agent",
         "agent agent"
     )
+
+    /** Built-in wake phrases plus any the user taught the agent via preferences. */
+    private fun effectiveWakePhrases(): Set<String> {
+        val extra = preferences.wakeWords
+            .split(',', ';', '\n')
+            .map { it.trim().lowercase(Locale.ROOT) }
+            .filter { it.length >= 3 }
+            .toSet()
+        return VALID_WAKE_PHRASES + extra
+    }
 
     private fun checkVoskHypothesis(hypothesisJson: String?) {
         if (hypothesisJson.isNullOrBlank() || !_isStandby.value) return
@@ -3084,8 +3154,9 @@ class AgentConversationService : Service() {
             if (wordList.isEmpty()) return
 
             val cleanPhrase = wordList.joinToString(" ")
-            val isMatch = cleanPhrase in VALID_WAKE_PHRASES ||
-                    VALID_WAKE_PHRASES.any { cleanPhrase.contains(it) } ||
+            val wakeSet = effectiveWakePhrases()
+            val isMatch = cleanPhrase in wakeSet ||
+                    wakeSet.any { cleanPhrase.contains(it) } ||
                     wordList.contains("agent")
 
             if (!isMatch) {

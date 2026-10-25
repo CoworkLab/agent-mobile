@@ -61,6 +61,8 @@ class AppPreferences(context: Context) {
         private const val KEY_OWNER_VOICE_THRESHOLD = "key_owner_voice_threshold"
         private const val KEY_OWNER_VOICE_SAMPLE_COUNT = "key_owner_voice_sample_count"
         private const val KEY_LANGUAGE = "key_language"
+        private const val KEY_WAKE_WORDS = "key_wake_words"
+        private const val KEY_AGENT_TITLE = "key_agent_title"
         private const val KEY_SILENT_EXECUTION_MODE = "key_silent_execution_mode"
         private const val KEY_TASK_OVERLAY_ENABLED = "key_task_overlay_enabled"
         private const val KEY_TASK_OVERLAY_AVATAR = "key_task_overlay_avatar"
@@ -227,6 +229,16 @@ class AppPreferences(context: Context) {
     var voice: String
         get() = prefs.getString(KEY_VOICE, GeminiConstants.DEFAULT_VOICE) ?: GeminiConstants.DEFAULT_VOICE
         set(value) = prefs.edit().putString(KEY_VOICE, value).apply()
+
+    /** Comma/semicolon separated extra wake phrases the user teaches the agent. */
+    var wakeWords: String
+        get() = prefs.getString(KEY_WAKE_WORDS, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_WAKE_WORDS, value).apply()
+
+    /** What the agent calls the user in speech, when the user has taught it. Empty = no honorific. */
+    var agentAddressWord: String
+        get() = prefs.getString(KEY_AGENT_TITLE, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_AGENT_TITLE, value.trim()).apply()
 
     var personality: String
         get() = prefs.getString(KEY_PERSONALITY, GeminiConstants.PERSONALITY_ASSISTANT) ?: GeminiConstants.PERSONALITY_ASSISTANT
