@@ -63,7 +63,7 @@ object LiveProtocol {
             add(
                 "generationConfig",
                 JsonObject().apply {
-                    add("responseModalities", JsonArray().apply { addProperty("AUDIO") })
+                    add("responseModalities", JsonArray().apply { add(com.google.gson.JsonPrimitive("AUDIO")) })
                     if (includeSpeechConfig) {
                         add(
                             "speechConfig",

@@ -91,24 +91,14 @@ class ChatFragment : Fragment() {
     }
 
     /**
-     * The chat tab must never fail silently: mirror the live connection status on
-     * the mode chip and toast service errors (missing key, permissions, connection
-     * drops) even though the Home tab is not visible.
+     * The chat tab must never fail silently: toast service errors (missing key,
+     * permissions, connection drops) and terminal connection failures even though
+     * the Home tab is not visible. Routine status text stays on the Home screen
+     * (the chat header chip is a static mode selector, not a status label).
      */
     private fun observeConnectionFeedback() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                launch {
-                    viewModel.connectionStatus.collect { status ->
-                        binding.chipMode.text = when {
-                            status == "LIVE" -> "Connected"
-                            status.startsWith("CONNECTING") || status.startsWith("CONFIGURING") ||
-                                status.startsWith("RECONNECTING") || status.startsWith("COOLDOWN") -> "Connecting..."
-                            status == "STANDBY" -> "Standby"
-                            else -> status.lowercase().replaceFirstChar { it.uppercase() }
-                        }
-                    }
-                }
                 launch {
                     viewModel.eventFlow.collect { message ->
                         if (message.isNotBlank()) {
@@ -124,6 +114,15 @@ class ChatFragment : Fragment() {
                                 "${error.title}: ${error.message}",
                                 Toast.LENGTH_LONG
                             ).show()
+                        }
+                    }
+                }
+                launch {
+                    viewModel.connectionStatus.collect { status ->
+                        // Surface terminal failures only; transient states stay on Home.
+                        val terminal = status.startsWith("ERROR")
+                        if (terminal) {
+                            Toast.makeText(requireContext(), "Agent: $status", Toast.LENGTH_LONG).show()
                         }
                     }
                 }

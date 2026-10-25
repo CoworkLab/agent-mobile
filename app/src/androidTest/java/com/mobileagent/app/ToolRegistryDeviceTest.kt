@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.mobileagent.app.tools.ToolRegistry
 import org.json.JSONArray
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -32,10 +33,12 @@ class ToolRegistryDeviceTest {
     }
 
     @Test
-    fun setupToolsJsonIncludesGroundingOnDevice() {
+    fun setupToolsJsonIsFunctionDeclarationsOnlyOnDevice() {
+        // google_search must NOT be sent in the Live setup payload — the real API
+        // closes the WebSocket when it is present (verified live; see live-test CI).
         val setup = ToolRegistry.setupToolsJson()
-        assertEquals(2, setup.length())
+        assertEquals(1, setup.length())
         assertTrue(setup.getJSONObject(0).has("functionDeclarations"))
-        assertTrue(setup.getJSONObject(1).has("google_search"))
+        assertFalse(setup.toString().contains("google_search"))
     }
 }
