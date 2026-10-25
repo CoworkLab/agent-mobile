@@ -96,7 +96,9 @@ def build_setup(model, tools, include_google=False, snake_case=True,
             "temperature": temperature,
         },
     }}
-    tool_list = list(tools)
+    tool_list = []
+    if tools:
+        tool_list.append({"functionDeclarations": list(tools)})
     if include_google:
         tool_list.append({"google_search": {}})
     if tool_list:
@@ -114,15 +116,15 @@ def recv_json(ws, timeout_s):
         raw = raw.decode("utf-8", "replace")
     if raw == "":
         # websocket-client returns "" when the peer sends a CLOSE frame.
-        info = ""
+        # Gemini reports setup problems (bad payload, quota, region) via the
+        # close reason; enableTrace(True) prints it. surface what we can:
+        detail = ""
         try:
-            info = f"close_status={ws.close_status_code} reason={ws.close_reason!r}"
+            frame = ws.recv_frame()  # type: ignore[attr-defined]
+            detail = str(frame.data or "")[:200]
         except Exception:
-            try:
-                info = f"handshake={ws.handshake_response.status}"
-            except Exception:
-                info = "close frame (status unavailable)"
-        raise RuntimeError(f"server closed the connection immediately [{info}]")
+            pass
+        raise RuntimeError(f"server closed the connection{': ' + detail if detail else ''}")
     return json.loads(raw)
 
 
@@ -242,7 +244,7 @@ def main():
             print(f"  [{label}] setupComplete RECEIVED -> handshake fine")
         else:
             print(f"  [{label}] -> {r['error']}")
-        time.sleep(1)
+        time.sleep(10)
 
     matrix = [
         ("V1 part7-provider + 3.1-flash-live-preview (the known-working combo)",
@@ -273,7 +275,7 @@ def main():
                 print(f"  model text: {r['text'][:120]!r}")
             if r["transcript_out"]:
                 print(f"  outputTranscription: {r['transcript_out'][:120]!r}")
-        time.sleep(1)
+        time.sleep(10)  # free-tier Live API has a very tight RPM — space the probes
 
     print("\n" + "=" * 74)
     print("VERDICT SUMMARY (setupComplete / response received)")
