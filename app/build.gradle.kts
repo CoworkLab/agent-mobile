@@ -27,8 +27,8 @@ android {
         applicationId = "com.mobileagent.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 201
-        versionName = "2.1.0"
+        versionCode = 202
+        versionName = "2.1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "DEVELOPER_NAME", buildConfigString(developerName.ifBlank { "Unverified developer" }))
@@ -125,6 +125,14 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha06")
 
     testImplementation("junit:junit:4.13.2")
+    // Real org.json on the JVM (android.jar's org.json stubs throw "not mocked")
+    testImplementation("org.json:json:20240303")
+
+    // Instrumented (emulator/device) tests
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:rules:1.6.1")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
 }
 
 

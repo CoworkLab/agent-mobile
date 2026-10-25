@@ -56,7 +56,7 @@ object AgentCoreTools {
             ToolRegistry.p("value", "STRING", req = true),
             ToolRegistry.p("category", "STRING", "Personal | Preferences | Contacts | Routines | Notes, default Preferences")
         ),
-        ToolRegistry.t("memory_recall", "Search saved memory.",
+        ToolRegistry.t("memory_recall", "Search the durable memory store for saved facts: names, preferences, contacts, routines and taught patterns. Check here first for how to address the user.",
             ToolRegistry.p("query", "STRING", req = true),
             ToolRegistry.p("limit", "INTEGER", "default 5")),
         ToolRegistry.t("memory_forget", "Delete matching saved memories.",
@@ -75,7 +75,7 @@ object AgentCoreTools {
             ToolRegistry.p("repeat", "STRING", "none | hourly | daily | weekly, default none",
                 enum = listOf("none", "hourly", "daily", "weekly"))
         ),
-        ToolRegistry.t("list_scheduled_tasks", "List scheduled tasks.", listOf()),
+        ToolRegistry.t("list_scheduled_tasks", "List every scheduled task with its instruction, schedule and status, so you can report or cancel them accurately.", listOf()),
         ToolRegistry.t("cancel_scheduled_task", "Cancel a scheduled task.",
             ToolRegistry.p("task_id", "STRING", req = true))
     )

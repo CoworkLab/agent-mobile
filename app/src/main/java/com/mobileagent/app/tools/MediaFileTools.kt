@@ -36,7 +36,7 @@ object MediaFileTools {
     )
 
     fun tools(): List<ToolRegistry.T> = listOf(
-        ToolRegistry.t("read_file", "Read a text file.",
+        ToolRegistry.t("read_file", "Read a text file from storage and return its contents (up to max_chars). Use for notes, downloads, configs and any file the user asks to open.",
             ToolRegistry.p("path", "STRING", "absolute file path", req = true),
             ToolRegistry.p("max_chars", "INTEGER", "default 20000")),
         ToolRegistry.t("write_file", "Write or append to a text file.",

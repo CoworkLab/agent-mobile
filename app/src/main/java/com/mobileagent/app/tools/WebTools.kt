@@ -118,7 +118,7 @@ object WebTools {
             ?: throw ToolException("Invalid URL '$url'.")
         val normalized = host.removeSurrounding("[", "]").lowercase()
         if (normalized == "localhost" || normalized.endsWith(".localhost") || normalized.endsWith(".local") ||
-            normalized == "0.0.0.0" || normalized == "::1"
+            normalized.endsWith(".internal") || normalized == "0.0.0.0" || normalized == "::1"
         ) throw ToolException("Blocked: '$host' is not a public host.")
         val addresses = runCatching { InetAddress.getAllByName(normalized) }
             .getOrElse { throw ToolException("Could not resolve host '$host'.") }

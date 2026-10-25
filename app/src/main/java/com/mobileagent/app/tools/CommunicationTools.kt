@@ -36,7 +36,7 @@ object CommunicationTools {
     )
 
     fun tools(): List<ToolRegistry.T> = listOf(
-        ToolRegistry.t("send_sms", "Send an SMS message.",
+        ToolRegistry.t("send_sms", "Send an SMS to a phone number; long texts are split into multipart automatically. Confirm the recipient and wording with ask_user before sending.",
             ToolRegistry.p("number", "STRING", "phone number (or contact name if resolvable)", req = true),
             ToolRegistry.p("text", "STRING", req = true)),
         ToolRegistry.t("read_sms", "Read recent SMS messages.",
@@ -49,7 +49,7 @@ object CommunicationTools {
         ToolRegistry.t("read_contacts", "Search the contact list.",
             ToolRegistry.p("query", "STRING", "name/number filter; empty = all"),
             ToolRegistry.p("limit", "INTEGER", "default 20")),
-        ToolRegistry.t("read_call_log", "Read recent calls.",
+        ToolRegistry.t("read_call_log", "Read the recent call log: incoming, outgoing and missed calls with numbers, names and timestamps. Use before dialing to check if a number is already known.",
             ToolRegistry.p("limit", "INTEGER", "default 20"),
             ToolRegistry.p("type", "STRING", "all | missed | incoming | outgoing",
                 enum = listOf("all", "missed", "incoming", "outgoing"))),
@@ -74,7 +74,7 @@ object CommunicationTools {
             ToolRegistry.p("text", "STRING"),
             ToolRegistry.p("file_path", "STRING"),
             ToolRegistry.p("package", "STRING", "send directly to this app")),
-        ToolRegistry.t("send_email", "Open an email draft.",
+        ToolRegistry.t("send_email", "Open a pre-filled email draft in the mail app with recipient, subject and body set; the user still sends it. Use ask_user for sensitive content.",
             ToolRegistry.p("to", "STRING", req = true),
             ToolRegistry.p("subject", "STRING"),
             ToolRegistry.p("body", "STRING"))
