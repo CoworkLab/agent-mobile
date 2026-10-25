@@ -22,6 +22,8 @@ jobs:
         run: pip install websocket-client
 
       - name: Run live protocol matrix against the real Gemini API
+        env:
+          DEBUG_WS: "1"
         run: |
           if [ -z "$GEMINI_API_KEY" ]; then
             echo "SKIP: add repo secret GEMINI_API_KEY to enable the live test."
