@@ -1714,7 +1714,7 @@ class AgentConversationService : Service() {
                 // New tool framework: perception, gestures, node actions, global actions,
                 // system, communication, media/files, web and agent-core tools.
                 if (ToolRegistry.handles(name)) {
-                    val registryResult = ToolRegistry.dispatch(name, args, ToolContext(app, this))
+                    val registryResult = ToolRegistry.dispatch(name, args, ToolContext(app, this@AgentConversationService))
                     liveWebSocket?.sendToolResponse(callId, name, registryResult)
                     return@withTimeout
                 }

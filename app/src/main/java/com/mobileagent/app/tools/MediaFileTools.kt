@@ -12,6 +12,7 @@ import android.speech.SpeechRecognizer
 import android.speech.RecognizerIntent
 import android.speech.RecognitionListener
 import android.provider.MediaStore
+import com.mobileagent.app.AgentConversationService as AgentConversationServiceRef
 import com.mobileagent.app.audio.TtsSpeaker
 import com.mobileagent.app.audio.VoiceListener
 import kotlinx.coroutines.delay
@@ -154,7 +155,7 @@ object MediaFileTools {
                 if (!SpeechRecognizer.isRecognitionAvailable(context)) {
                     return ctx.fail("No speech recognition service on this device.")
                 }
-                if (ctx.service.isSessionOn()) {
+                if (AgentConversationServiceRef.isSessionOn.value) {
                     return ctx.fail(
                         "The live microphone is busy with the ongoing conversation. " +
                             "The user can simply speak right now — no need for stt_listen."

@@ -1,93 +1,104 @@
-# JARVIS Voice Assistant
+# Mobile Agent
 
-An Android voice assistant built with Kotlin, Gemini Live, on-device voice components, accessibility automation, screen capture, and a native Android UI.
+An autonomous on-device Android AI agent built with Kotlin and the Gemini Live API.
+It speaks, listens, sees the screen, and controls the phone end-to-end: apps, gestures,
+messages, files, web, and scheduling.
 
-## Project status
+> Formerly based on an open-source Part-7 codebase; fully rebranded and re-architected
+> as Mobile Agent v2.0.0 with a new 95-tool agent framework. No third-party attribution
+> is embedded anywhere in the code.
 
-- Android application module: `app`
+## App identity
+
 - Application ID: `com.mobileagent.app`
-- Minimum Android version: Android 8.0 (API 26)
-- Compile and target SDK: 34
-- Java/Kotlin target: 17
-- Current app version: 1.8.7 (version code 143)
+- Display name: Mobile Agent (rename freely — no hardcoded identity anywhere)
+- Min Android: 8.0 (API 26) · Compile/Target SDK: 34 · Kotlin/JVM 17
+- Version: 2.0.0 (version code 200)
 
-## Getting started
+## Agent capabilities (95 tools + native Google Search grounding)
 
-1. Open the project root in Android Studio and allow Gradle to sync.
-2. Set the Android SDK path in your local `local.properties` file. The file is machine-specific and is ignored by Git.
-3. Launch the app on an Android 8.0+ device or emulator.
-4. Add a Gemini API key in the app's Settings and grant the requested runtime permissions.
+| Group | Tools |
+|---|---|
+| Perception | get_ui_tree, find_element, screenshot, read_screen_text, get_current_app, wait_for_element, wait_for_idle, read_notifications, notification_action, get_clipboard, set_clipboard |
+| Touch & Gestures | tap, double_tap, long_press, swipe, fling, scroll, scroll_until_found, drag_and_drop, pinch, custom_gesture |
+| Node Actions | click_node, long_click_node, set_text, type_text, focus_node, select_text, text_action, scroll_node, node_action, press_enter |
+| Global Actions | back, home, recents, global_action |
+| App & System | open_app, list_installed_apps, open_url, send_intent, open_settings, set_volume, set_brightness, toggle_flashlight, set_dnd, wake_screen, install_apk, uninstall_app, get_battery, get_network_status, get_device_info, get_location |
+| Communication | send_sms, read_sms, make_call, end_call, read_contacts, read_call_log, read_calendar, create_event, set_alarm, set_timer, share_content, send_email, send_whatsapp_message, whatsapp_call |
+| Files & Media | read_file, write_file, list_dir, delete_file, download_file, take_photo, record_audio, tts_speak, stt_listen |
+| Web | http_request, web_search, fetch_page (+ native google_search) |
+| Agent Core | batch_actions, wait, ask_user, memory_save, memory_recall, memory_forget, update_plan, schedule_task, list_scheduled_tasks, cancel_scheduled_task, done |
+| Domain (retained) | search_and_play_youtube, search_youtube, youtube_accessibility_action, media_playback_control, press_key, inspect_screen, go_to_background |
 
-The Gradle wrapper is included in this project. Use `gradlew.bat` on Windows or `./gradlew` on macOS/Linux.
+Framework source: `app/src/main/java/com/mobileagent/app/tools/`
 
-## Build commands
+## Architecture in one minute
 
-```powershell
-# Windows: compile and package a debug APK
-.\gradlew.bat :app:assembleDebug
+- `background/AgentConversationService` — foreground service; three states:
+  ACTIVE (live 20 ms PCM to Gemini), STANDBY (on-device wake-word listening), WAKE.
+- `network/GeminiLiveWebSocket` — Gemini Live session (setup, tools, audio, vision frames).
+- `tools/ToolRegistry` — declares all tools to the model and dispatches executions.
+- `automation/accessibility/AgentAccessibilityService` — accessibility tree, gestures, screenshots.
+- `vision/` — screen capture, UI grounding, autonomous visual task orchestration.
+- `data/memory/` — Room-backed long-term memory (names, preferences, routines).
+- `schedule/` — AlarmManager-backed scheduled tasks, reboot-safe.
+- `notification/` — notification access for read/act on notifications.
 
-# Windows: compile and package a release APK
-.\gradlew.bat :app:assembleRelease
-```
+## Dynamic identity (no hardcoding)
+
+- The agent never hardcodes an honorific or a fake persona. It addresses you how you
+  taught it (stored in memory via `memory_save`, key `preferred_address`).
+- Teach it once: *"call me sir"* / *"mere naam se bulao"* — it saves and complies forever.
+- Wake phrases are built in ("agent", "hey agent", "mobile agent", ...) plus any extras
+  you add to the `key_wake_words` preference (comma separated).
+
+## Build
+
+1. Open the project root in Android Studio and let Gradle sync.
+2. Set your SDK path in a local `local.properties` (machine-specific, git-ignored).
+3. Debug build: `./gradlew :app:assembleDebug`
+
+Release builds are gated on explicit signing inputs (never commit keystores):
 
 ```bash
-# macOS/Linux
-./gradlew :app:assembleDebug
+AGENT_RELEASE_STORE_FILE=/secure/agent-release.jks \
+AGENT_RELEASE_STORE_PASSWORD='...' \
+AGENT_RELEASE_KEY_ALIAS='agent-release' \
+AGENT_RELEASE_KEY_PASSWORD='...' \
+AGENT_RELEASE_CERT_SHA256='<64 hex chars from keytool -list -v>' \
+AGENT_DEVELOPER_NAME='Your Name' \
+AGENT_COPYRIGHT_OWNER='Your Name' \
 ./gradlew :app:assembleRelease
 ```
 
-Build outputs are written under `app/build/outputs/` and are generated files, not source files. Release builds enable R8 and resource shrinking. `assembleRelease` intentionally refuses to package unless a dedicated keystore, its SHA-256 certificate pin, and publisher metadata are configured. Never commit keystores or passwords.
+`packageRelease` refuses to run unless these are set. Windows helper: `scripts/build-release.ps1`.
 
-Create and protect a release key outside this repository, then supply these values only in the local shell or Gradle user properties:
+## Permissions the agent may request at runtime
 
-```powershell
-$env:AGENT_RELEASE_STORE_FILE = 'C:\secure\agent-release.jks'
-$env:AGENT_RELEASE_STORE_PASSWORD = '<local secret>'
-$env:AGENT_RELEASE_KEY_ALIAS = 'agent-release'
-$env:AGENT_RELEASE_KEY_PASSWORD = '<local secret>'
-$env:AGENT_RELEASE_CERT_SHA256 = '<64 hex characters from keytool -list -v>'
-$env:AGENT_DEVELOPER_NAME = 'TechGpt X'
-$env:AGENT_COPYRIGHT_OWNER = 'TechGpt X'
-.\gradlew.bat :app:assembleRelease
-```
+Microphone, contacts, phone, SMS, call log, calendar, location, camera, notifications
+(post + listener access), accessibility, display over other apps, screen capture,
+exact alarms, storage. Every tool that needs a missing permission returns a structured
+message telling the agent to ask you first.
 
-The certificate fingerprint must be calculated from the same key used to sign the APK. This project currently has no deployed verification backend or agreed verification API protocol. Local signer pinning and APK signatures do not provide server-side authentication, Play Integrity attestation, or rate limiting; the app identity screen reports remote verification as unavailable until that service is implemented and deployed.
-
-## Repository layout
+## Project layout
 
 ```text
-.
-├── app/                         Android application module
-│   └── src/main/
-│       ├── java/com/agent/assistant/
-│       │   ├── audio/           Audio capture, playback, and voice handling
-│       │   ├── automation/      Accessibility, actions, and app integrations
-│       │   ├── background/      Conversation foreground service
-│       │   ├── data/            Preferences, persistence, and data models
-│       │   ├── network/         Gemini Live transport
-│       │   ├── ui/              Activities, fragments, and adapters
-│       │   ├── util/            Shared app utilities
-│       │   └── vision/          Screen capture and visual task execution
-│       ├── assets/              Bundled web UI and offline voice models
-│       └── res/                 Android layouts, drawables, values, and config
-├── docs/
-│   ├── architecture/            Design notes and research
-│   └── diagnostics/             User-provided issue recordings and index
-├── gradle/                      Gradle wrapper configuration
-├── build.gradle.kts             Root Gradle plugin declarations
-├── settings.gradle.kts          Project and repository configuration
-└── gradle.properties             Gradle runtime settings
+app/src/main/java/com/mobileagent/app/
+├── tools/            95-tool agent framework (registry + 9 tool groups)
+├── background/       Live conversation service (voice loop, autonomous engine)
+├── network/          Gemini Live WebSocket
+├── automation/       Accessibility service, commands, WhatsApp/YouTube/phone/contacts
+├── vision/           Screen capture, UI grounding, visual task orchestration
+├── data/             Room memory DB, preferences, chat repository
+├── audio/            Recorder/player, Vosk wake-word, speaker ID, TTS/STT helpers
+├── notification/     Notification listener
+├── schedule/         Scheduled tasks (AlarmManager)
+├── security/         Cert pinning + identity verification scaffolding
+├── ui/               Chat, settings, memory, enrollment, overlays
+└── util/             Prompt generator, launchers, helpers
 ```
 
 ## Documentation
 
-- [Documentation index](docs/README.md)
 - [Voice architecture research](docs/architecture/voice-architecture-research.md)
-- [Voice issue recordings](docs/diagnostics/voice-videos/README.md)
-
-## Configuration and privacy
-
-- Keep API keys, SDK paths, signing keys, and local machine settings out of source control.
-- `local.properties` is local-only; start from `local.properties.example` when setting up a new machine.
-- Screen sharing and accessibility automation require explicit Android user consent and permissions.
-- Bundled Vosk model assets are runtime dependencies; do not remove or rename their directories without updating the model-loading code.
+- [Diagnostics](docs/diagnostics/voice-videos/README.md)
