@@ -17,6 +17,7 @@ import android.os.Build
 import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -88,9 +89,22 @@ object CommunicationTools {
                 val number = resolveNumber(ctx, raw)
                     ?: throw ToolException("Could not resolve '$raw' to a phone number. Use read_contacts to search contacts.")
                 val text = args.getString("text")
+                if (text.isBlank()) throw ToolException("SMS text is empty.")
                 val sm = if (Build.VERSION.SDK_INT >= 31) context.getSystemService(SmsManager::class.java)
                          else @Suppress("DEPRECATION") SmsManager.getDefault()
-                sm.sendTextMessage(number, null, text, null, null)
+                // Long messages fail silently with sendTextMessage; divide into multipart parts.
+                runCatching {
+                    if (text.length <= 160) {
+                        sm.sendTextMessage(number, null, text, null, null)
+                    } else {
+                        sm.sendMultipartTextMessage(number, null, sm.divideMessage(text), null, null)
+                    }
+                }.onFailure { e ->
+                    throw ToolException(
+                        "SMS send failed: ${e.message}. Check that a SIM is inserted, mobile network is available, " +
+                            "and the number is valid (with country code if needed)."
+                    )
+                }
                 ctx.ok("sent" to true, "to" to number, "text" to text.take(120))
             }
             "read_sms" -> {
@@ -219,15 +233,37 @@ object CommunicationTools {
                 val start = parseIso(args.getString("start"))
                 val end = args.optString("end", "").takeIf { it.isNotBlank() }?.let { parseIso(it) }
                     ?: (start.clone() as Calendar).apply { add(Calendar.HOUR, 1) }
-                val i = Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI)
-                    .putExtra(CalendarContract.Events.TITLE, title)
-                    .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start.timeInMillis)
-                    .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, end.timeInMillis)
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                args.optString("location", "").takeIf { it.isNotBlank() }?.let { i.putExtra(CalendarContract.Events.EVENT_LOCATION, it) }
-                args.optString("description", "").takeIf { it.isNotBlank() }?.let { i.putExtra(CalendarContract.Events.DESCRIPTION, it) }
-                val launched = runCatching { context.startActivity(i) }.isSuccess
-                ctx.ok("draft_opened" to launched, "note" to "The calendar editor is open; confirm it with UI tools if needed.")
+                val location = args.optString("location", "").takeIf { it.isNotBlank() }
+                val description = args.optString("description", "").takeIf { it.isNotBlank() }
+                // Direct calendar insert (WRITE_CALENDAR is already required above) - no editor UI needed.
+                val values = android.content.ContentValues().apply {
+                    put(CalendarContract.Events.TITLE, title)
+                    put(CalendarContract.Events.DTSTART, start.timeInMillis)
+                    put(CalendarContract.Events.DTEND, end.timeInMillis)
+                    put(CalendarContract.Events.EVENT_TIMEZONE, java.util.TimeZone.getDefault().id)
+                    location?.let { put(CalendarContract.Events.EVENT_LOCATION, it) }
+                    description?.let { put(CalendarContract.Events.DESCRIPTION, it) }
+                    put(CalendarContract.Events.CALENDAR_ID, pickWritableCalendarId(context))
+                }
+                val inserted = runCatching {
+                    context.contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
+                }.getOrNull()
+                if (inserted != null) {
+                    ctx.ok("created" to true, "event_uri" to inserted.toString(),
+                        "start" to SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date(start.timeInMillis)))
+                } else {
+                    // Fallback: open the calendar editor so the user can save it manually.
+                    val i = Intent(Intent.ACTION_INSERT).setData(CalendarContract.Events.CONTENT_URI)
+                        .putExtra(CalendarContract.Events.TITLE, title)
+                        .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, start.timeInMillis)
+                        .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, end.timeInMillis)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    location?.let { i.putExtra(CalendarContract.Events.EVENT_LOCATION, it) }
+                    description?.let { i.putExtra(CalendarContract.Events.DESCRIPTION, it) }
+                    runCatching { context.startActivity(i) }
+                        .onFailure { throw ToolException("Could not create the event directly (no writable calendar found) and the editor failed to open: ${it.message}") }
+                    ctx.ok("draft_opened" to true, "note" to "No writable calendar accepted the direct insert; the calendar editor is open. Confirm it with UI tools.")
+                }
             }
             "set_alarm" -> {
                 val hour = args.optInt("hour", -1).let { if (it in 0..23) it else throw ToolException("hour must be 0-23.") }
@@ -262,13 +298,28 @@ object CommunicationTools {
                 if (text.isBlank() && filePath.isBlank()) throw ToolException("Provide 'text' or 'file_path'.")
                 val i = Intent().apply {
                     action = Intent.ACTION_SEND
-                    type = if (filePath.isNotBlank()) "application/octet-stream" else "text/plain"
-                    if (text.isNotBlank()) putExtra(Intent.EXTRA_TEXT, text)
+                    if (filePath.isNotBlank()) {
+                        val f = File(if (filePath.startsWith("file://")) Uri.parse(filePath).path ?: filePath else filePath)
+                        if (!f.exists()) throw ToolException("File not found: ${f.absolutePath}")
+                        type = guessShareMime(f.name)
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            context, context.packageName + ".fileprovider", f
+                        )
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        if (text.isNotBlank()) putExtra(Intent.EXTRA_TEXT, text)
+                    } else {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, text)
+                    }
                     args.optString("package", "").takeIf { it.isNotBlank() }?.let { setPackage(it) }
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
-                val launched = runCatching { context.startActivity(Intent.createChooser(i, "Share").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
-                ctx.ok("share_opened" to launched)
+                runCatching {
+                    context.startActivity(Intent.createChooser(i, "Share").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }.onFailure { e ->
+                    throw ToolException("Could not open the share sheet: ${e.message}")
+                }
+                ctx.ok("share_opened" to true, "file" to filePath.takeIf { it.isNotBlank() })
             }
             "send_email" -> {
                 val to = args.getString("to")
@@ -344,5 +395,37 @@ object CommunicationTools {
             }
         }
         throw ToolException("Could not parse datetime '$value'. Use ISO format like 2026-01-01T09:00:00.")
+    }
+
+    /** First writable calendar account id for direct event inserts, or null when none exists. */
+    private fun pickWritableCalendarId(context: Context): Long {
+        return runCatching {
+            context.contentResolver.query(
+                CalendarContract.Calendars.CONTENT_URI,
+                arrayOf(CalendarContract.Calendars._ID, CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL),
+                "${CalendarContract.Calendars.CALENDAR_ACCESS_LEVEL}>=?",
+                arrayOf(CalendarContract.Calendars.CAL_ACCESS_CONTRIBUTOR.toString()),
+                null
+            )?.use { c -> if (c.moveToFirst()) c.getLong(0) else null }
+        }.getOrNull() ?: 1L
+    }
+
+    private fun guessShareMime(name: String): String = when (name.substringAfterLast('.', "").lowercase()) {
+        "jpg", "jpeg" -> "image/jpeg"
+        "png" -> "image/png"
+        "gif" -> "image/gif"
+        "webp" -> "image/webp"
+        "mp3" -> "audio/mpeg"
+        "wav" -> "audio/wav"
+        "m4a" -> "audio/mp4"
+        "mp4" -> "video/mp4"
+        "pdf" -> "application/pdf"
+        "txt" -> "text/plain"
+        "json" -> "application/json"
+        "csv" -> "text/csv"
+        "zip" -> "application/zip"
+        "apk" -> "application/vnd.android.package-archive"
+        "vcf" -> "text/vcard"
+        else -> "application/octet-stream"
     }
 }

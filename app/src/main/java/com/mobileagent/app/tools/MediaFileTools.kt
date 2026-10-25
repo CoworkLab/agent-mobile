@@ -99,20 +99,25 @@ object MediaFileTools {
                 ctx.ok("deleted" to deleted, "path" to f.absolutePath)
             }
             "download_file" -> {
-                val url = args.getString("url")
+                val url = args.getString("url").trim()
+                WebTools.requirePublicHost(url) // same DNS-level SSRF guard as http_request
                 val name2 = args.optString("save_as", "").ifBlank {
                     "download_${System.currentTimeMillis()}"
                 }
                 val client = okhttp3.OkHttpClient.Builder()
                     .connectTimeout(java.time.Duration.ofSeconds(15))
-                    .readTimeout(java.time.Duration.ofSeconds(60))
+                    .readTimeout(java.time.Duration.ofSeconds(120))
                     .build()
-                val req = okhttp3.Request.Builder().url(url).build()
+                val req = okhttp3.Request.Builder().url(url)
+                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14) MobileAgent/2.0")
+                    .build()
                 client.newCall(req).execute().use { resp ->
                     if (!resp.isSuccessful) throw ToolException("Download failed: HTTP ${resp.code}")
-                    val bytes = resp.body?.bytes() ?: throw ToolException("Empty response body.")
-                    val saved = saveToStorage(context, name2, bytes)
-                    ctx.ok("saved" to true, "path" to saved, "size" to bytes.size)
+                    val body = resp.body ?: throw ToolException("Empty response body.")
+                    // Stream to disk - never buffer the whole file in memory.
+                    val saved = saveStreamToStorage(context, name2, body.byteStream(),
+                        resp.header("Content-Type")?.substringBefore(';'))
+                    ctx.ok("saved" to true, "path" to saved)
                 }
             }
             "take_photo" -> {
@@ -127,6 +132,12 @@ object MediaFileTools {
             }
             "record_audio" -> {
                 if (!ctx.hasPermission(Manifest.permission.RECORD_AUDIO)) ctx.permissionError("record_audio", Manifest.permission.RECORD_AUDIO)
+                if (AgentConversationServiceRef.isSessionOn.value) {
+                    return ctx.fail(
+                        "The live microphone is busy with the ongoing conversation, so a recording cannot run in parallel. " +
+                            "Use go_to_background first (standby mode frees the mic), then call record_audio."
+                    )
+                }
                 val seconds = args.optInt("seconds", 5).coerceIn(1, 300)
                 val dir = File(context.getExternalFilesDir(null), "recordings").apply { mkdirs() }
                 val f = File(dir, "rec_${SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())}.m4a")
@@ -188,6 +199,28 @@ object MediaFileTools {
             dir.mkdirs()
             val f = File(dir, safeName)
             f.writeBytes(bytes)
+            f.absolutePath
+        }
+    }
+
+    /** Streaming variant used by download_file: writes chunks straight to disk. */
+    fun saveStreamToStorage(context: Context, fileName: String, input: java.io.InputStream, contentType: String?): String {
+        val safeName = fileName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        return if (Build.VERSION.SDK_INT >= 29) {
+            val values = android.content.ContentValues().apply {
+                put(MediaStore.Downloads.DISPLAY_NAME, safeName)
+                put(MediaStore.Downloads.MIME_TYPE, contentType ?: guessMime(safeName))
+            }
+            val uri = context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                ?: throw ToolException("Could not create download entry.")
+            context.contentResolver.openOutputStream(uri)?.use { out -> input.use { it.copyTo(out, 128 * 1024) } }
+                ?: throw ToolException("Could not open output stream.")
+            uri.toString()
+        } else {
+            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            dir.mkdirs()
+            val f = File(dir, safeName)
+            f.outputStream().use { out -> input.use { it.copyTo(out, 128 * 1024) } }
             f.absolutePath
         }
     }

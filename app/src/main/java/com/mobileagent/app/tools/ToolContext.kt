@@ -73,6 +73,13 @@ class ToolContext(
         put("message", message)
         extra()
     }
+
+    /** Overload for pre-built extra payloads (e.g. partial batch results). */
+    fun fail(message: String, extra: JSONObject): JSONObject = JSONObject().apply {
+        put("success", false)
+        put("message", message)
+        for (k in extra.keys()) put(k, extra.opt(k))
+    }
 }
 
 /** Shared helpers for walking and matching the accessibility tree. */

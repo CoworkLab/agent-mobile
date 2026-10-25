@@ -1,25 +1,22 @@
 package com.mobileagent.app.tools
 
 import android.Manifest
-import android.app.AlarmManager
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
 import android.net.Uri
-import android.net.wifi.WifiManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
 import android.provider.AlarmClock
 import android.provider.Settings
-import android.content.pm.PackageManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
-import java.net.NetworkInterface
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -78,6 +75,57 @@ object SystemTools {
             ToolRegistry.p("on", "BOOLEAN", req = true))
     )
 
+    // ---- helpers -----------------------------------------------------------
+
+    /** Start an activity and translate common launch failures into honest tool errors. */
+    private fun launchOrExplain(context: Context, intent: Intent, toolName: String) {
+        try {
+            context.startActivity(intent)
+        } catch (e: android.content.ActivityNotFoundException) {
+            throw ToolException(
+                "No installed app can handle this request ($toolName: ${intent.action ?: ""} ${intent.data ?: ""}). " +
+                    "Use find_intent_handlers to check what is available, or open the target app first."
+            )
+        } catch (e: SecurityException) {
+            throw ToolException("The system blocked $toolName: ${e.message}. Check the requested permission and try ask_user if the user must grant it.")
+        }
+    }
+
+    /**
+     * Modern APK install: stream the file into a PackageInstaller session. This works on
+     * scoped-storage Android (a plain file:// Intent does not) and still shows the system
+     * confirmation dialog the user (or the agent via UI tools) must accept.
+     */
+    private fun installApkSession(context: Context, apk: File): Pair<Boolean, String> {
+        val packageInstaller = context.packageManager.packageInstaller
+        return try {
+            val sessionId = packageInstaller.createSession(
+                android.content.pm.PackageInstaller.SessionParams(android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+            )
+            val session = packageInstaller.openSession(sessionId)
+            try {
+                session.openWrite("apk", 0, apk.length()).use { out ->
+                    apk.inputStream().use { input -> input.copyTo(out, 128 * 1024) }
+                    session.fsync(out)
+                }
+                val pi = android.app.PendingIntent.getActivity(
+                    context,
+                    sessionId,
+                    Intent(Intent.ACTION_INSTALL_PACKAGE).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                )
+                session.commit(pi.intentSender)
+                true to "session committed"
+            } finally {
+                session.close()
+            }
+        } catch (e: SecurityException) {
+            false to "install permission was revoked (${e.message}); re-grant 'Install unknown apps'."
+        } catch (e: Exception) {
+            false to (e.message ?: e::class.java.simpleName)
+        }
+    }
+
     suspend fun run(name: String, args: JSONObject, ctx: ToolContext): JSONObject {
         val context = ctx.context
         return when (name) {
@@ -96,19 +144,30 @@ object SystemTools {
             }
             "open_url" -> {
                 val url = args.getString("url").trim()
-                val fixed = if (!url.startsWith("http") && !url.contains("://")) "https://$url" else url
+                if (url.isBlank()) throw ToolException("open_url needs a 'url'.")
+                // Keep known non-http schemes intact; treat everything else scheme-less as a domain.
+                val hasScheme = url.contains("://") ||
+                    listOf("content:", "geo:", "market:", "mailto:", "tel:", "sms:", "smsto:", "upi:", "intent:", "spotify:", "tg:")
+                        .any { url.lowercase().startsWith(it) }
+                val fixed = if (hasScheme) url else "https://$url"
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fixed))
                     .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                val launched = runCatching { context.startActivity(intent) }.isSuccess
-                if (launched) delay(600)
-                ctx.ok("opened" to launched, "url" to fixed)
+                launchOrExplain(context, intent, "open_url")
+                delay(600)
+                ctx.ok("url" to fixed, "note" to "Verify the destination with get_current_app before interacting.")
             }
             "send_intent" -> {
                 val action = args.getString("action")
                 val intent = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                args.optString("data", "").takeIf { it.isNotBlank() }?.let { intent.data = Uri.parse(it) }
+                val data = args.optString("data", "").takeIf { it.isNotBlank() }
+                val type = args.optString("type", "").takeIf { it.isNotBlank() }
+                // setData and setType CLEAR each other; only setDataAndType keeps both.
+                when {
+                    data != null && type != null -> intent.setDataAndType(Uri.parse(data), type)
+                    data != null -> intent.data = Uri.parse(data)
+                    type != null -> intent.type = type
+                }
                 args.optString("package", "").takeIf { it.isNotBlank() }?.let { intent.setPackage(it) }
-                args.optString("type", "").takeIf { it.isNotBlank() }?.let { intent.type = it }
                 args.optJSONObject("extras")?.let { extras ->
                     extras.keys().forEach { key ->
                         val v = extras.get(key)
@@ -121,8 +180,8 @@ object SystemTools {
                         }
                     }
                 }
-                val launched = runCatching { context.startActivity(intent) }.isSuccess
-                ctx.ok("sent" to launched, "action" to action)
+                launchOrExplain(context, intent, "send_intent")
+                ctx.ok("sent" to true, "action" to action, "note" to "Verify the result with get_current_app or wait_for_element.")
             }
             "open_settings" -> {
                 val page = args.getString("page")
@@ -153,7 +212,13 @@ object SystemTools {
                     if (pkg.isBlank()) throw ToolException("app_details needs a 'package' argument.")
                     intent.data = Uri.parse("package:$pkg")
                 }
-                val launched = runCatching { context.startActivity(intent) }.isSuccess
+                val launched = runCatching { context.startActivity(intent) }
+                    .onFailure { e ->
+                        throw ToolException(
+                            "Could not open Settings page '$page': ${e.message}. " +
+                                "Some OEMs rename settings pages; try send_intent with the exact Settings action instead."
+                        )
+                    }.isSuccess
                 ctx.ok("opened" to launched, "page" to page)
             }
             "set_dnd" -> {
@@ -197,12 +262,18 @@ object SystemTools {
                         JSONObject().put("fix", "Call open_settings page='app_details' package='${context.packageName}' and enable 'Install unknown apps', then retry.")
                     )
                 }
-                val uri = if (path.startsWith("file://")) Uri.parse(path) else Uri.parse("file://$path")
-                val intent = Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(uri, "application/vnd.android.package-archive")
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                val launched = runCatching { context.startActivity(intent) }.isSuccess
-                ctx.ok("install_started" to launched)
+                val apkFile = File(if (path.startsWith("file://")) Uri.parse(path).path ?: path else path)
+                if (!apkFile.exists() || !apkFile.isFile) throw ToolException("APK not found: ${apkFile.absolutePath}")
+                if (apkFile.length() == 0L) throw ToolException("APK file is empty: ${apkFile.absolutePath}")
+                val result = installApkSession(context, apkFile)
+                if (result.first) {
+                    ctx.ok(
+                        "install_started" to true,
+                        "note" to "The system install confirmation will appear. Handle it with UI tools: wait_for_element for the Install button, click it, then wait and confirm the completion dialog."
+                    )
+                } else {
+                    ctx.fail("APK install could not start: ${result.second}")
+                }
             }
             "uninstall_app" -> {
                 val pkg = args.getString("package")
@@ -224,18 +295,33 @@ object SystemTools {
                 )
             }
             "get_network_status" -> {
-                val wm = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-                val wifiEnabled = runCatching { wm.isWifiEnabled }.getOrDefault(false)
-                val connectedSsid = runCatching {
-                    wm.connectionInfo?.ssid?.removeSurrounding("\"").takeIf { !it.isNullOrBlank() && it != "<unknown ssid>" }
-                }.getOrNull()
                 val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-                val active = cm.activeNetworkInfo
+                var connected = false
+                var typeName = "none"
+                var metered: Boolean? = null
+                if (Build.VERSION.SDK_INT >= 23) {
+                    val network = cm.activeNetwork
+                    val caps = network?.let { cm.getNetworkCapabilities(it) }
+                    if (caps != null && caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
+                        connected = true
+                        typeName = when {
+                            caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"
+                            caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) -> "mobile_data"
+                            caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET) -> "ethernet"
+                            else -> "other"
+                        }
+                        metered = !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    val info = cm.activeNetworkInfo
+                    connected = info?.isConnected == true
+                    typeName = info?.typeName?.lowercase(Locale.US) ?: "none"
+                }
                 ctx.ok(
-                    "wifi_enabled" to wifiEnabled,
-                    "wifi_ssid" to connectedSsid,
-                    "connected" to (active?.isConnected == true),
-                    "type" to (active?.typeName ?: "none")
+                    "connected" to connected,
+                    "type" to typeName,
+                    "metered" to metered
                 )
             }
             "get_device_info" -> {
@@ -289,7 +375,13 @@ object SystemTools {
                     chars.get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true &&
                         chars.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
                 } ?: return ctx.fail("No flashlight-capable camera found.")
-                cm.setTorchMode(torchId, on)
+                runCatching { cm.setTorchMode(torchId, on) }
+                    .onFailure { e ->
+                        throw ToolException(
+                            if (e is android.hardware.camera2.CameraAccessException) "Flashlight unavailable: the camera is in use by another app. Close it first."
+                            else "Flashlight failed: ${e.message}"
+                        )
+                    }
                 ctx.ok("flashlight" to if (on) "on" else "off")
             }
             else -> ctx.fail("Unknown system tool '$name'.")

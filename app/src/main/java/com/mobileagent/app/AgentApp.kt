@@ -121,6 +121,28 @@ class AgentApp : Application() {
     var currentResumedActivity: android.app.Activity? = null
         private set
 
+    /**
+     * Device profile cache (spec: auto device profile). Holds the stable static facts
+     * (SDK, model, screen, hardware features) keyed by Build.FINGERPRINT so the profile
+     * survives across sessions but rebuilds after OS/OTA changes. Permission and service
+     * states are NEVER cached here - they are probed live before every use.
+     */
+    @Volatile
+    var deviceProfileCache: String = ""
+        private set
+
+    private var deviceProfileFingerprint: String = ""
+
+    fun refreshDeviceProfileCache(profile: String) {
+        val fingerprint = android.os.Build.FINGERPRINT + "|" + android.os.Build.VERSION.SDK_INT
+        synchronized(this) {
+            if (fingerprint != deviceProfileFingerprint || deviceProfileCache.isBlank()) {
+                deviceProfileFingerprint = fingerprint
+                deviceProfileCache = profile
+            }
+        }
+    }
+
     fun moveAppToBack(): Boolean {
         val act = currentResumedActivity ?: return false
         return try {

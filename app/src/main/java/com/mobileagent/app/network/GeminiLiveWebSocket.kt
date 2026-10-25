@@ -57,6 +57,7 @@ class GeminiLiveWebSocket(
 
     private var sessionRenewalJob: Job? = null
     private var reconnectJob: Job? = null
+    private var reconnectAttempts = 0
     var promptProvider: (() -> String)? = null
 
     fun isSessionReady(): Boolean = isConnected.get() && isSetupComplete.get()
@@ -272,6 +273,7 @@ class GeminiLiveWebSocket(
             // 0. Server setupComplete handshake acknowledgment
             if (json.has("setupComplete")) {
                 Log.i(TAG, "Server acknowledged setup: setupComplete received. Session is now LIVE!")
+                reconnectAttempts = 0
                 if (!isSetupComplete.getAndSet(true)) {
                     listener.onConnectionStateChanged("LIVE")
                     startSessionRenewal()
@@ -529,9 +531,13 @@ class GeminiLiveWebSocket(
     private fun scheduleReconnect() {
         reconnectJob?.cancel()
         reconnectJob = coroutineScope?.launch(Dispatchers.IO) {
-            delay(500)
+            // Exponential backoff so quota collisions / network drops do not hammer the API.
+            val backoffMs = longArrayOf(2_000L, 5_000L, 10_000L, 20_000L, 40_000L)
+            val delayMs = backoffMs[reconnectAttempts.coerceAtMost(backoffMs.lastIndex)]
+            reconnectAttempts++
+            Log.d(TAG, "Reconnecting in ${delayMs}ms (attempt $reconnectAttempts)")
+            delay(delayMs)
             if (!isManuallyStopped.get()) {
-                Log.d(TAG, "Attempting auto-reconnect...")
                 initiateConnection()
             }
         }

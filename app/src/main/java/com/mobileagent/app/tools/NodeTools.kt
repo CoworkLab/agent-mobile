@@ -239,11 +239,8 @@ object NodeTools {
         return null
     }
 
-    fun findFocusedEditable(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        val all = NodeQuery.walk(root)
-        all.firstOrNull { it.isFocused && NodeQuery.editable(it) }?.let { return it }
-        return all.firstOrNull { NodeQuery.editable(it) && it.isFocused }
-    }
+    fun findFocusedEditable(root: AccessibilityNodeInfo): AccessibilityNodeInfo? =
+        NodeQuery.walk(root).firstOrNull { it.isFocused && NodeQuery.editable(it) }
 
     private fun clickAncestor(node: AccessibilityNodeInfo, wantFocus: Boolean = false): Boolean {
         var current: AccessibilityNodeInfo? = node

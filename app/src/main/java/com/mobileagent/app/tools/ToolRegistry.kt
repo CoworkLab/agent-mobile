@@ -73,7 +73,8 @@ object ToolRegistry {
     fun allTools(): List<T> = legacyTools +
         PerceptionTools.tools() + GestureTools.tools() + NodeTools.tools() +
         GlobalActionTools.tools() + SystemTools.tools() + CommunicationTools.tools() +
-        MediaFileTools.tools() + WebTools.tools() + AgentCoreTools.tools()
+        MediaFileTools.tools() + WebTools.tools() + AgentCoreTools.tools() +
+        DeviceDiscoveryTools.tools()
 
     /** True when the registry itself executes this tool (vs. the service's legacy handlers). */
     fun handles(name: String): Boolean = when (name) {
@@ -87,6 +88,7 @@ object ToolRegistry {
         in MediaFileTools.NAMES -> true
         in WebTools.NAMES -> true
         in AgentCoreTools.NAMES -> true
+        in DeviceDiscoveryTools.NAMES -> true
         else -> false
     }
 
@@ -146,6 +148,7 @@ object ToolRegistry {
                 name in MediaFileTools.NAMES -> MediaFileTools.run(name, args, ctx)
                 name in WebTools.NAMES -> WebTools.run(name, args, ctx)
                 name in AgentCoreTools.NAMES -> AgentCoreTools.run(name, args, ctx)
+                name in DeviceDiscoveryTools.NAMES -> DeviceDiscoveryTools.run(name, args, ctx)
                 else -> ctx.fail("Unknown tool '$name'.")
             }
         } catch (e: ToolException) {

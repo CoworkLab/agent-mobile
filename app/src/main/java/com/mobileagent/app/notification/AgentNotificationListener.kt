@@ -34,6 +34,7 @@ class AgentNotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
+        instance = this
         isBound = true
         activeNotifications?.forEach { store(it) }
     }
@@ -42,6 +43,11 @@ class AgentNotificationListener : NotificationListenerService() {
         isBound = false
         lock.lock()
         try { latest.clear() } finally { lock.unlock() }
+    }
+
+    override fun onDestroy() {
+        instance = null
+        super.onDestroy()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -100,16 +106,23 @@ class AgentNotificationListener : NotificationListenerService() {
         var isBound: Boolean = false
             private set
 
+        /** Live service instance; needed because cancelNotification is an instance method. */
+        @Volatile
+        private var instance: AgentNotificationListener? = null
+
         fun snapshot(): List<Captured> {
             synchronized(lock) { return latest.values.sortedByDescending { it.postedAt }.toList() }
         }
 
         fun byId(id: String): Captured? = synchronized(lock) { latest[id] }
 
-        fun dismiss(n: Captured): Boolean = runCatching {
-            if (Build.VERSION.SDK_INT >= 31) cancelNotification(n.sbn.key) else cancelNotification(n.packageName, n.sbn.tag, n.sbn.id)
-            true
-        }.getOrDefault(false)
+        fun dismiss(n: Captured): Boolean {
+            val svc = instance ?: return false
+            return runCatching {
+                if (Build.VERSION.SDK_INT >= 31) svc.cancelNotification(n.sbn.key) else svc.cancelNotification(n.packageName, n.sbn.tag, n.sbn.id)
+                true
+            }.getOrDefault(false)
+        }
 
         fun open(n: Captured): Boolean = runCatching {
             val pi = n.sbn.notification.contentIntent ?: return false
@@ -125,6 +138,27 @@ class AgentNotificationListener : NotificationListenerService() {
             action.actionIntent.send()
             true
         }.getOrDefault(false)
+
+        /**
+         * Reply through the notification's inline RemoteInput action (WhatsApp/Telegram/Messages
+         * quick reply). Returns (success, failureReason). Fails honestly when the notification
+         * exposes no remote-input action so the agent can fall back to opening the app.
+         */
+        fun reply(n: Captured, text: String): Pair<Boolean, String> {
+            val svc = instance ?: return false to "Notification listener is not connected."
+            return runCatching {
+                val action = n.sbn.notification.actions
+                    ?.firstOrNull { it.remoteInputs != null && it.remoteInputs.isNotEmpty() }
+                    ?: return false to "This notification has no inline reply field."
+                val remoteInput = action.remoteInputs.first()
+                val fillIntent = android.content.Intent()
+                val bundle = android.os.Bundle()
+                bundle.putCharSequence(remoteInput.resultKey, text)
+                android.app.RemoteInput.addResultsToIntent(action.remoteInputs, fillIntent, bundle)
+                action.actionIntent.send(svc, 0, fillIntent)
+                true to ""
+            }.getOrElse { false to "Reply failed: ${it.message}" }
+        }
 
         private fun keyOf(sbn: StatusBarNotification): String = "${sbn.packageName}|${sbn.id}|${sbn.tag ?: ""}"
     }

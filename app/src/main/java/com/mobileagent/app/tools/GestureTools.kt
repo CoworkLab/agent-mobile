@@ -74,17 +74,17 @@ object GestureTools {
         val svc = ctx.requireAccessibility()
         return when (name) {
             "tap" -> {
-                val (x, y) = point2(args)
-                dispatch(svc, stroke(pathOf(x, y, x, y), 50))
+                val (x, y) = point2(args, ctx)
+                dispatch(svc, stroke(pathOf(x, y, x, y), 60))
                 ctx.ok("action" to "tap", "x" to x, "y" to y)
             }
             "double_tap" -> {
-                val (x, y) = point2(args)
-                dispatch(svc, chainStrokes(listOf(pathOf(x, y, x, y) to 40L, pathOf(x, y, x, y) to 40L), gapMs = 90L))
+                val (x, y) = point2(args, ctx)
+                dispatch(svc, chainStrokes(listOf(pathOf(x, y, x, y) to 50L, pathOf(x, y, x, y) to 50L), gapMs = 90L))
                 ctx.ok("action" to "double_tap", "x" to x, "y" to y)
             }
             "long_press" -> {
-                val (x, y) = point2(args)
+                val (x, y) = point2(args, ctx)
                 val dur = args.optInt("duration_ms", 800).coerceIn(300, 30_000)
                 dispatch(svc, stroke(pathOf(x, y, x, y), dur.toLong()))
                 ctx.ok("action" to "long_press", "x" to x, "y" to y, "duration_ms" to dur)
@@ -215,8 +215,25 @@ object GestureTools {
 
     // ---- gesture primitives -------------------------------------------------
 
-    private fun point2(args: JSONObject): Pair<Int, Int> =
-        args.optInt("x") to args.optInt("y")
+    /** Read and validate x/y coordinates: present, numeric and inside the screen. */
+    private fun point2(args: JSONObject, ctx: ToolContext): Pair<Int, Int> {
+        if (!args.has("x") || !args.has("y")) {
+            throw ToolException("Missing 'x'/'y' coordinates. Get positions from get_ui_tree node bounds first.")
+        }
+        val x = args.optInt("x", Int.MIN_VALUE)
+        val y = args.optInt("y", Int.MIN_VALUE)
+        if (x == Int.MIN_VALUE || y == Int.MIN_VALUE) {
+            throw ToolException("'x'/'y' must be integer pixel coordinates.")
+        }
+        val b = ctx.screenBounds()
+        if (x < -5 || y < -5 || x > b.width() + 5 || y > b.height() + 5) {
+            throw ToolException(
+                "Coordinates ($x, $y) are outside the screen (${b.width()}x${b.height()}). " +
+                    "Use bounds from get_ui_tree, not invented values."
+            )
+        }
+        return x.coerceIn(0, b.width() - 1) to y.coerceIn(0, b.height() - 1)
+    }
 
     private fun pathOf(x1: Int, y1: Int, x2: Int, y2: Int): Path =
         Path().apply { moveTo(x1.toFloat(), y1.toFloat()); lineTo(x2.toFloat(), y2.toFloat()) }
@@ -226,37 +243,46 @@ object GestureTools {
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
             .build()
 
-    /** Sequential strokes: each begins after the previous one ends (plus gapMs). */
+    /**
+     * Sequential strokes from one finger: each begins after the previous one ends (plus gapMs).
+     * Only the FINAL stroke may keep `willContinue = false`; every earlier stroke must mark
+     * `willContinue = true` or the system treats them as independent touches.
+     */
     private fun chainStrokes(segments: List<Pair<Path, Long>>, gapMs: Long): GestureDescription {
         val builder = GestureDescription.Builder()
-        var offset = 0L
         var previous: GestureDescription.StrokeDescription? = null
-        for ((path, dur) in segments) {
+        var offset = 0L
+        for ((index, segment) in segments.withIndex()) {
+            val (path, dur) = segment
+            val willContinue = index < segments.lastIndex
             previous = if (previous == null) {
-                val s = GestureDescription.StrokeDescription(path, 0, dur, true)
-                builder.addStroke(s); s
+                GestureDescription.StrokeDescription(path, 0, dur, willContinue).also { builder.addStroke(it) }
             } else {
-                val s = previous.continueStroke(path, offset + gapMs, dur, true)
-                builder.addStroke(s); s
+                previous.continueStroke(path, offset + gapMs, dur, willContinue).also { builder.addStroke(it) }
             }
             offset += dur + gapMs
         }
         return builder.build()
     }
 
-    private fun dispatch(svc: AgentAccessibilityService, gesture: GestureDescription): Boolean {
-        val ok = java.util.concurrent.atomic.AtomicBoolean(false)
+    /** Dispatch a gesture and block until the system confirms completion or cancellation. */
+    private fun dispatch(svc: AgentAccessibilityService, gesture: GestureDescription) {
+        val completed = java.util.concurrent.atomic.AtomicBoolean(false)
         val latch = java.util.concurrent.CountDownLatch(1)
-        val done = svc.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
+        val accepted = svc.dispatchGesture(gesture, object : AccessibilityService.GestureResultCallback() {
             override fun onCompleted(g: GestureDescription?, callback: android.os.CancellationSignal?) {
-                ok.set(true); latch.countDown()
+                completed.set(true); latch.countDown()
             }
             override fun onCancelled(g: GestureDescription?, callback: android.os.CancellationSignal?) {
-                ok.set(false); latch.countDown()
+                completed.set(false); latch.countDown()
             }
         }, null)
-        if (!done) throw ToolException("System rejected the gesture (another gesture may be in progress). Wait a moment and retry.")
-        latch.await(15, java.util.concurrent.TimeUnit.SECONDS)
-        return ok.get()
+        if (!accepted) {
+            throw ToolException("System rejected the gesture (another gesture may be in progress). Wait a moment and retry.")
+        }
+        val finished = latch.await(20, java.util.concurrent.TimeUnit.SECONDS)
+        if (!finished || !completed.get()) {
+            throw ToolException("Gesture was cancelled or did not complete (screen may be off or another gesture took over). Retry once, then re-observe with get_ui_tree.")
+        }
     }
 }

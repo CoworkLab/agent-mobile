@@ -5,17 +5,17 @@ It speaks, listens, sees the screen, and controls the phone end-to-end: apps, ge
 messages, files, web, and scheduling.
 
 > Formerly based on an open-source Part-7 codebase; fully rebranded and re-architected
-> as Mobile Agent v2.0.0 with a new 95-tool agent framework. No third-party attribution
-> is embedded anywhere in the code.
+> as Mobile Agent with a 100-tool agent framework. No third-party attribution is
+> embedded anywhere in the code.
 
 ## App identity
 
 - Application ID: `com.mobileagent.app`
 - Display name: Mobile Agent (rename freely — no hardcoded identity anywhere)
 - Min Android: 8.0 (API 26) · Compile/Target SDK: 34 · Kotlin/JVM 17
-- Version: 2.0.0 (version code 200)
+- Version: 2.1.0 (version code 201)
 
-## Agent capabilities (95 tools + native Google Search grounding)
+## Agent capabilities (100 tools + native Google Search grounding)
 
 | Group | Tools |
 |---|---|
@@ -28,6 +28,7 @@ messages, files, web, and scheduling.
 | Files & Media | read_file, write_file, list_dir, delete_file, download_file, take_photo, record_audio, tts_speak, stt_listen |
 | Web | http_request, web_search, fetch_page (+ native google_search) |
 | Agent Core | batch_actions, wait, ask_user, memory_save, memory_recall, memory_forget, update_plan, schedule_task, list_scheduled_tasks, cancel_scheduled_task, done |
+| Device Discovery | get_capabilities, check_permission, request_permission, find_intent_handlers, get_app_info |
 | Domain (retained) | search_and_play_youtube, search_youtube, youtube_accessibility_action, media_playback_control, press_key, inspect_screen, go_to_background |
 
 Framework source: `app/src/main/java/com/mobileagent/app/tools/`
@@ -84,7 +85,7 @@ message telling the agent to ask you first.
 
 ```text
 app/src/main/java/com/mobileagent/app/
-├── tools/            95-tool agent framework (registry + 9 tool groups)
+├── tools/            100-tool agent framework (registry + 10 tool groups)
 ├── background/       Live conversation service (voice loop, autonomous engine)
 ├── network/          Gemini Live WebSocket
 ├── automation/       Accessibility service, commands, WhatsApp/YouTube/phone/contacts

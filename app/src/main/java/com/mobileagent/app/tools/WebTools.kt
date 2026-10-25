@@ -108,21 +108,25 @@ object WebTools {
         }
     }
 
-    private fun requirePublicHost(url: String) {
+    /**
+     * DNS-level SSRF guard: refuse non-public hosts. Shared with MediaFileTools.download_file.
+     * NOTE: the private-address check MUST propagate its exception — wrapping it in a swallowed
+     * runCatching would silently disable the entire guard.
+     */
+    fun requirePublicHost(url: String) {
         val host = runCatching { java.net.URI(url).host }.getOrNull()
             ?: throw ToolException("Invalid URL '$url'.")
         val normalized = host.removeSurrounding("[", "]").lowercase()
         if (normalized == "localhost" || normalized.endsWith(".localhost") || normalized.endsWith(".local") ||
             normalized == "0.0.0.0" || normalized == "::1"
         ) throw ToolException("Blocked: '$host' is not a public host.")
-        runCatching {
-            val addresses = InetAddress.getAllByName(normalized)
-            addresses.forEach { addr ->
-                if (addr.isLoopbackAddress || addr.isLinkLocalAddress || addr.isSiteLocalAddress ||
-                    addr.isAnyLocalAddress || addr.isMulticastAddress
-                ) {
-                    throw ToolException("Blocked: '$host' resolves to a private address (${addr.hostAddress}).")
-                }
+        val addresses = runCatching { InetAddress.getAllByName(normalized) }
+            .getOrElse { throw ToolException("Could not resolve host '$host'.") }
+        for (addr in addresses) {
+            if (addr.isLoopbackAddress || addr.isLinkLocalAddress || addr.isSiteLocalAddress ||
+                addr.isAnyLocalAddress || addr.isMulticastAddress
+            ) {
+                throw ToolException("Blocked: '$host' resolves to a private address (${addr.hostAddress}).")
             }
         }
     }

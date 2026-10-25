@@ -37,15 +37,16 @@ object PerceptionTools {
         ),
         ToolRegistry.t(
             "screenshot",
-            "Capture the current screen and attach it visually for the next model turn. Use when the UI tree is " +
-                "empty or unclear (games, WebView, images, canvas UIs).",
+            "Capture the current screen (or a cropped region) and attach it visually for the next model turn. " +
+                "Use when the UI tree is empty or unclear (games, WebView, images, canvas UIs). This also acts as " +
+                "your OCR: read any text inside the image directly (signs, memes, scanned pages, video subtitles).",
             ToolRegistry.p("region", "OBJECT", "optional crop in px {left, top, right, bottom}")
         ),
         ToolRegistry.t(
             "read_screen_text", "Read all visible text on screen from the accessibility tree. Fast fallback when get_ui_tree is too long.",
             ToolRegistry.p("max_chars", "INTEGER", "default 4000")
         ),
-        ToolRegistry.t("get_current_app", "Get the foreground app package name.", null ?: run { listOf<ToolRegistry.P>() }),
+        ToolRegistry.t("get_current_app", "Get the foreground app package name.", listOf<ToolRegistry.P>()),
         ToolRegistry.t(
             "wait_for_element", "Wait until an element appears on screen or timeout.",
             ToolRegistry.p("query", "STRING", "text/desc/id to wait for", req = true),
@@ -61,10 +62,11 @@ object PerceptionTools {
             ToolRegistry.p("app", "STRING", "filter by package name")
         ),
         ToolRegistry.t(
-            "notification_action", "Dismiss, open or trigger an action on a notification.",
+            "notification_action", "Dismiss, open, reply to or trigger an action button on a notification.",
             ToolRegistry.p("notification_id", "STRING", "id from read_notifications", req = true),
-            ToolRegistry.p("action", "STRING", "dismiss | open | action_button", req = true,
-                enum = listOf("dismiss", "open", "action_button")),
+            ToolRegistry.p("action", "STRING", "dismiss | open | reply | action_button", req = true,
+                enum = listOf("dismiss", "open", "reply", "action_button")),
+            ToolRegistry.p("reply_text", "STRING", "message text when action=reply"),
             ToolRegistry.p("button_label", "STRING", "action button label when action=action_button")
         ),
         ToolRegistry.t("get_clipboard", "Read clipboard text (subject to Android 10+ clipboard restrictions).", listOf<ToolRegistry.P>()),
@@ -213,6 +215,21 @@ object PerceptionTools {
                     "open" -> {
                         val did = AgentNotificationListener.open(n)
                         ctx.ok("opened" to did)
+                    }
+                    "reply" -> {
+                        val replyText = args.optString("reply_text", "")
+                        if (replyText.isBlank()) {
+                            throw ToolException("action=reply needs 'reply_text'.")
+                        }
+                        val result = AgentNotificationListener.reply(n, replyText)
+                        if (result.first) {
+                            ctx.ok("replied" to true, "note" to "Reply delivered via the notification's remote-input action.")
+                        } else {
+                            ctx.fail(
+                                result.second,
+                                JSONObject().put("fix", "Open the app with action=open, then use set_text + click_node to send the message.")
+                            )
+                        }
                     }
                     "action_button" -> {
                         val label = args.optString("button_label", "")

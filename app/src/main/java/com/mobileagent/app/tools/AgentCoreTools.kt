@@ -20,8 +20,8 @@ object AgentCoreTools {
         "cancel_scheduled_task"
     )
 
-    /** Tools that must never run inside batch_actions. */
-    private val FORBIDDEN_IN_BATCH = setOf("batch_actions", "ask_user", "done", "wait")
+    /** Tools that must never run inside batch_actions (wait IS allowed - it is safe and useful between steps). */
+    private val FORBIDDEN_IN_BATCH = setOf("batch_actions", "ask_user", "done")
 
     fun tools(): List<ToolRegistry.T> = listOf(
         ToolRegistry.t(

@@ -105,7 +105,8 @@ class AgentConversationService : Service() {
             "open_url", "send_intent", "open_settings", "toggle_flashlight", "set_dnd", "wake_screen",
             "install_apk", "uninstall_app", "send_sms", "make_call", "end_call",
             "share_content", "send_email", "create_event", "set_alarm", "set_timer",
-            "notification_action", "write_file", "delete_file", "download_file", "take_photo", "record_audio"
+            "notification_action", "write_file", "delete_file", "download_file", "take_photo", "record_audio",
+            "request_permission"
  )
 
         private const val CHANNEL_ID = "agent_conversation"
@@ -354,6 +355,95 @@ class AgentConversationService : Service() {
             bulk && goal.contains("instagram") -> 480_000L
             goal.contains("spotify") && listOf("play", "bajao", "chalao").any(goal::contains) -> 120_000L
             else -> 25_000L
+        }
+    }
+
+    /** batch_actions can legitimately chain 8 actions + expect waits + final observation. */
+    private fun toolTimeoutFor(name: String): Long =
+        if (name == "batch_actions") 90_000L else automationToolTimeoutMs()
+
+    /**
+     * Compact device profile for the system prompt (spec: auto device profile).
+     * Static facts are cached per fingerprint; permission/service states are probed live.
+     */
+    private fun deviceProfileSummary(): String {
+        val app = application as? AgentApp ?: return ""
+        return runCatching {
+            val live = com.mobileagent.app.tools.DeviceDiscoveryTools.capabilitiesJson(app)
+            val summary = StringBuilder()
+            summary.append("Android ${live.optString("android_version")} (API ${live.optInt("sdk_int")}), ")
+                .append(live.optString("manufacturer")).append(' ').append(live.optString("model"))
+                .append(", screen ").append(live.optString("screen"))
+            val agentFeatures = live.optJSONObject("agent_features")
+            if (agentFeatures != null) {
+                val working = mutableListOf<String>()
+                val broken = mutableListOf<String>()
+                agentFeatures.keys().forEach { k ->
+                    if (agentFeatures.optBoolean(k)) working.add(k) else broken.add(k)
+                }
+                if (working.isNotEmpty()) summary.append(". Working: ").append(working.joinToString(", "))
+                if (broken.isNotEmpty()) summary.append(". Unavailable: ").append(broken.joinToString(", "))
+            }
+            val perms = live.optJSONObject("permissions")
+            if (perms != null) {
+                val missing = mutableListOf<String>()
+                perms.keys().forEach { k -> if (!perms.optBoolean(k)) missing.add(k) }
+                if (missing.isNotEmpty()) summary.append(". Missing permissions: ").append(missing.joinToString(", "))
+                    .append(" (check_permission / request_permission can fix these).")
+            }
+            app.refreshDeviceProfileCache(live.toString())
+            summary.toString()
+        }.getOrDefault("")
+    }
+
+    /**
+     * Shared autonomous-loop bookkeeping for EVERY screen-mutating tool - both the legacy
+     * handlers and the ToolRegistry tools. Tracks failures, repeated identical actions and
+     * the step limit, and stamps the result with autonomous_status + system_directive so the
+     * model always knows whether to continue, retry or stop and report.
+     */
+    private fun applyAutonomousBookkeeping(name: String, args: JSONObject, result: JSONObject) {
+        val toolSuccess = result.optBoolean("success", true)
+        com.mobileagent.app.automation.agent.AgentTaskEngine.recordVerifiedStep(
+            name,
+            result.optString("message", "Tool action completed"),
+            result.optBoolean("verified", false)
+        )
+        if (!toolSuccess) {
+            com.mobileagent.app.automation.agent.AgentTaskEngine.failCurrentStep(
+                result.optString("message", "Tool action failed"),
+                blocked = result.optBoolean("requires_confirmation", false)
+            )
+        }
+        val recentOtp = com.mobileagent.app.automation.accessibility.AgentAccessibilityService.getRecentOtp()
+        val otpNotice = if (recentOtp != null) " [SYSTEM OTP DETECTED: '$recentOtp']" else ""
+        val goalObj = com.mobileagent.app.automation.agent.TaskGoal.fromUserUtterance(autonomousTaskGoal)
+        val bulkNotice = if (goalObj.isBulkAction) " [PERSISTENT BULK ACTION MODE: Goal involves '${goalObj.bulkKeywords.joinToString()}'. Process ALL matching items by scrolling down iteratively! Do NOT declare completion after only one screen.]" else ""
+        result.put("step_number", autonomousStepCount)
+        result.put("autonomous_goal", autonomousTaskGoal)
+        if (toolSuccess) consecutiveToolFailures = 0 else consecutiveToolFailures++
+        val toolSig = name + ":" + normalizedArgsSignature(args)
+        if (name != "scroll_screen" && name != "scroll" && name != "scroll_node" && toolSig == lastToolSignature) sameToolRepeatCount++
+        else { lastToolSignature = toolSig; sameToolRepeatCount = 1 }
+        if (consecutiveToolFailures >= MAX_CONSECUTIVE_FAILURES ||
+            (sameToolRepeatCount >= 3 && !isInstagramBulkTask()) ||
+            autonomousStepCount >= autonomousTaskStepLimit()) {
+            autonomousHardStop = true
+        }
+        if (autonomousHardStop) {
+            com.mobileagent.app.automation.agent.AgentTaskEngine.finish(
+                com.mobileagent.app.automation.agent.AgentTaskEngine.State.FAILED,
+                "Autonomous safety limit reached after repeated failures or actions."
+            )
+            result.put("autonomous_status", "STOPPED")
+            result.put("system_directive", "HARD STOP: you are repeating actions or failing repeatedly. Do NOT call any more tools. Tell the user honestly, in one or two short sentences, what you actually completed and what went wrong (do NOT claim success), then wait for their next instruction.")
+        } else if (toolSuccess) {
+            result.put("autonomous_status", "EXECUTED")
+            result.put("system_directive", "AUTONOMOUS STEP $autonomousStepCount EXECUTED. OVERARCHING GOAL: '$autonomousTaskGoal'$otpNotice$bulkNotice. MANDATE: Inspect the screen. If the OVERARCHING GOAL is not yet 100% finished on screen, you MUST IMMEDIATELY take the next concrete action (click, type, scroll, wait for install/open). NEVER ABANDON THE TASK MID-WAY! NEVER call done until the ultimate goal is fully achieved on screen!")
+        } else {
+            result.put("autonomous_status", "FAILED")
+            val failMsg = result.optString("message", "Action failed")
+            result.put("system_directive", "CRITICAL WARNING: STEP $autonomousStepCount FAILED ($failMsg)$otpNotice. You MUST NOT claim the action succeeded, do NOT say you completed it, and do NOT call done! Either retry the action, tap the field to focus it first, or truthfully inform the user.")
         }
     }
 
@@ -730,7 +820,8 @@ class AgentConversationService : Service() {
                 userLocation = preferences.userLocation,
                 isTorchOn = app.phoneControlManager.isTorchOn,
                 language = preferences.language,
-                isSilentExecutionMode = preferences.isSilentExecutionMode
+                isSilentExecutionMode = preferences.isSilentExecutionMode,
+                deviceProfile = deviceProfileSummary()
             )
         }
     }
@@ -1654,7 +1745,7 @@ class AgentConversationService : Service() {
                     if (!isActive) return@withLock
                     isExecutingTool = true
                     try {
-                        withTimeout(automationToolTimeoutMs()) {
+                        withTimeout(toolTimeoutFor(name)) {
                             val app = application as? AgentApp ?: return@withTimeout
 
                 // Argument aliases: newer tool schemas map onto legacy handler argument names.
@@ -1712,9 +1803,12 @@ class AgentConversationService : Service() {
                 }
 
                 // New tool framework: perception, gestures, node actions, global actions,
-                // system, communication, media/files, web and agent-core tools.
+                // system, communication, media/files, web, agent-core and device-discovery tools.
                 if (ToolRegistry.handles(name)) {
                     val registryResult = ToolRegistry.dispatch(name, args, ToolContext(app, this@AgentConversationService))
+                    if (isAutomationTool && name != "done") {
+                        applyAutonomousBookkeeping(name, args, registryResult)
+                    }
                     liveWebSocket?.sendToolResponse(callId, name, registryResult)
                     return@withTimeout
                 }
@@ -2370,48 +2464,7 @@ class AgentConversationService : Service() {
                 }
 
                 if (isAutomationTool && name != "task_completed") {
-                    val toolSuccess = result.optBoolean("success", true)
-                    com.mobileagent.app.automation.agent.AgentTaskEngine.recordVerifiedStep(
-                        name,
-                        result.optString("message", "Tool action completed"),
-                        result.optBoolean("verified", false)
-                    )
-                    if (!toolSuccess) {
-                        com.mobileagent.app.automation.agent.AgentTaskEngine.failCurrentStep(
-                            result.optString("message", "Tool action failed"),
-                            blocked = result.optBoolean("requires_confirmation", false)
-                        )
-                    }
-                    val recentOtp = com.mobileagent.app.automation.accessibility.AgentAccessibilityService.getRecentOtp()
-                    val otpNotice = if (recentOtp != null) " [SYSTEM OTP DETECTED: '$recentOtp']" else ""
-                    val goalObj = com.mobileagent.app.automation.agent.TaskGoal.fromUserUtterance(autonomousTaskGoal)
-                    val bulkNotice = if (goalObj.isBulkAction) " [PERSISTENT BULK ACTION MODE: Goal involves '${goalObj.bulkKeywords.joinToString()}'. Process ALL matching items by scrolling down iteratively! Do NOT declare completion after only one screen.]" else ""
-                    result.put("step_number", autonomousStepCount)
-                    result.put("autonomous_goal", autonomousTaskGoal)
-                    if (toolSuccess) consecutiveToolFailures = 0 else consecutiveToolFailures++
-                    val toolSig = name + ":" + normalizedArgsSignature(args)
-                    if (name != "scroll_screen" && toolSig == lastToolSignature) sameToolRepeatCount++
-                    else { lastToolSignature = toolSig; sameToolRepeatCount = 1 }
-                    if (consecutiveToolFailures >= MAX_CONSECUTIVE_FAILURES ||
-                        (sameToolRepeatCount >= 3 && !isInstagramBulkTask()) ||
-                        autonomousStepCount >= autonomousTaskStepLimit()) {
-                        autonomousHardStop = true
-                    }
-                    if (autonomousHardStop) {
-                        com.mobileagent.app.automation.agent.AgentTaskEngine.finish(
-                            com.mobileagent.app.automation.agent.AgentTaskEngine.State.FAILED,
-                            "Autonomous safety limit reached after repeated failures or actions."
-                        )
-                        result.put("autonomous_status", "STOPPED")
-                        result.put("system_directive", "HARD STOP: you are repeating actions or failing repeatedly. Do NOT call any more tools. Tell the user honestly, in one or two short sentences, what you actually completed and what went wrong (do NOT claim success), then wait for their next instruction.")
-                    } else if (toolSuccess) {
-                        result.put("autonomous_status", "EXECUTED")
-                        result.put("system_directive", "AUTONOMOUS STEP $autonomousStepCount EXECUTED. OVERARCHING GOAL: '$autonomousTaskGoal'$otpNotice$bulkNotice. MANDATE: Inspect the screen. If the OVERARCHING GOAL is not yet 100% finished on screen, you MUST IMMEDIATELY take the next concrete action (click, type, scroll, wait for install/open). NEVER ABANDON THE TASK MID-WAY! NEVER call task_completed until the ultimate goal is fully achieved on screen!")
-                    } else {
-                        result.put("autonomous_status", "FAILED")
-                        val failMsg = result.optString("message", "Action failed")
-                        result.put("system_directive", "CRITICAL WARNING: STEP $autonomousStepCount FAILED ($failMsg)$otpNotice. You MUST NOT claim the action succeeded, do NOT say you completed it, and do NOT call task_completed! Either retry the action, tap the field to focus it first, or truthfully inform the user.")
-                    }
+                    applyAutonomousBookkeeping(name, args, result)
                 }
 
                             liveWebSocket?.sendToolResponse(callId, name, result)
