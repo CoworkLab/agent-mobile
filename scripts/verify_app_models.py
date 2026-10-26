@@ -27,7 +27,8 @@ from gemini_live_protocol_test import (  # noqa: E402
 APP_MODELS = [
     ("models/gemini-3.1-flash-live-preview", True),   # Part 7 default, CRITICAL
     ("models/gemini-3.8-live", False),                # fallback
-    ("models/gemini-3.1-flash-agent", False),         # third radio option
+    ("models/gemini-3.8-live-extended-thinking", False),  # third radio option
+    ("models/gemini-3.1-flash-agent", None),          # legacy dead ID: must FAIL (kept as tombstone check)
 ]
 
 SIMPLE_TOOLS = [

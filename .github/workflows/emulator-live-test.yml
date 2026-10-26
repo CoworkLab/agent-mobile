@@ -68,12 +68,14 @@ jobs:
               exit 0
             fi
             adb wait-for-device
-            # The E2E provider test needs network only, but grant the runtime
-            # permissions the real agent flow uses so the environment matches
-            # a user's phone as closely as possible.
-            for perm in android.permission.RECORD_AUDIO android.permission.CALL_PHONE android.permission.READ_CONTACTS; do
+            # Reproduce a real user's granted-permission phone as closely as possible:
+            # the service requires RECORD_AUDIO + notifications + battery-optimization
+            # exemption before it will start a conversation session.
+            for perm in android.permission.RECORD_AUDIO android.permission.CALL_PHONE \
+                        android.permission.READ_CONTACTS android.permission.POST_NOTIFICATIONS; do
               adb shell pm grant com.mobileagent.app $perm 2>/dev/null || true
             done
+            adb shell dumpsys deviceidle whitelist +com.mobileagent.app || true
             ./gradlew connectedDebugAndroidTest --stacktrace --no-daemon \
               -Pandroid.testInstrumentationRunnerArguments.geminiApiKey="$GEMINI_API_KEY" \
               -Pandroid.testInstrumentationRunnerArguments.class=com.mobileagent.app.LiveAgentE2eTest

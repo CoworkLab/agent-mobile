@@ -45,7 +45,9 @@ class GeminiLiveWebSocket(
 
     private var activeModel: String = when (model) {
         GeminiConstants.MODEL_3_8_LIVE -> GeminiConstants.MODEL_3_8_LIVE
-        GeminiConstants.MODEL_3_1_FLASH_AGENT -> GeminiConstants.MODEL_3_1_FLASH
+        GeminiConstants.MODEL_3_8_LIVE_THINKING -> GeminiConstants.MODEL_3_8_LIVE_THINKING
+        // Legacy dead ID saved by older builds: run on the default Live model.
+        GeminiConstants.LEGACY_MODEL_3_1_FLASH_AGENT -> GeminiConstants.MODEL_3_1_FLASH
         else -> if (model.isNotBlank() && !model.contains("2.5")) model else GeminiConstants.DEFAULT_MODEL
     }
 
