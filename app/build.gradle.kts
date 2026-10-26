@@ -27,8 +27,8 @@ android {
         applicationId = "com.mobileagent.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 210
-        versionName = "2.2.0"
+        versionCode = 220
+        versionName = "2.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "DEVELOPER_NAME", buildConfigString(developerName.ifBlank { "Unverified developer" }))
