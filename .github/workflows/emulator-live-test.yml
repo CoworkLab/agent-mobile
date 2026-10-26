@@ -1,0 +1,97 @@
+name: Emulator live agent test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verify-models:
+    name: Verify app models against real Gemini API
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install websocket client
+        run: pip install websocket-client
+
+      - name: List Live-capable models + run one real turn per app model
+        run: |
+          if [ -z "$GEMINI_API_KEY" ]; then
+            echo "SKIP: add repo secret GEMINI_API_KEY to enable the live test."
+            exit 0
+          fi
+          python3 scripts/verify_app_models.py
+
+  emulator-live-e2e:
+    name: Real Android emulator E2E (agent must respond)
+    runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Install Android SDK components
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          [ -x "$SDKMANAGER" ] || SDKMANAGER=sdkmanager
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-34" "build-tools;34.0.0" > /dev/null
+
+      - name: Build debug APK + instrumented tests
+        run: ./gradlew assembleDebug assembleDebugAndroidTest --stacktrace --no-daemon
+
+      - name: Boot emulator and run live E2E (real API key)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 31
+          target: google_apis
+          arch: x86_64
+          script: |
+            if [ -z "$GEMINI_API_KEY" ]; then
+              echo "SKIP: add repo secret GEMINI_API_KEY to enable the live E2E."
+              exit 0
+            fi
+            adb wait-for-device
+            # The E2E provider test needs network only, but grant the runtime
+            # permissions the real agent flow uses so the environment matches
+            # a user's phone as closely as possible.
+            for perm in android.permission.RECORD_AUDIO android.permission.CALL_PHONE android.permission.READ_CONTACTS; do
+              adb shell pm grant com.mobileagent.app $perm 2>/dev/null || true
+            done
+            ./gradlew connectedDebugAndroidTest --stacktrace --no-daemon \
+              -Pandroid.testInstrumentationRunnerArguments.geminiApiKey="$GEMINI_API_KEY" \
+              -Pandroid.testInstrumentationRunnerArguments.class=com.mobileagent.app.LiveAgentE2eTest
+
+      - name: Dump emulator logs on failure
+        if: failure()
+        run: |
+          adb devices || true
+          adb logcat -d -v time > emulator-logcat.txt || true
+          echo "--- LiveAgentE2e / GeminiLiveWebSocket / AgentConversationService log lines ---"
+          grep -iE "LiveAgentE2e|GeminiLiveWebSocket|AgentConversation|setupComplete|onError" emulator-logcat.txt | tail -200 || true
+
+      - name: Upload emulator logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emulator-live-logs
+          path: |
+            emulator-logcat.txt
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
