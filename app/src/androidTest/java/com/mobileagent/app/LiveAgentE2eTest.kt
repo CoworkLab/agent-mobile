@@ -35,6 +35,8 @@ import java.util.concurrent.atomic.AtomicInteger
  *       + ToolRegistry.setupToolsJson() (full production setup payload)
  *       + the user's real Gemini API key
  *       + the real wss://generativelanguage.googleapis.com endpoint
+ *     If the full payload is rejected, a bare no-tools probe runs too, so the
+ *     failure message pinpoints whether the tool declarations are the cause.
  *
  *   Stage 2 (service level — the exact path a user's typed chat message takes):
  *     AgentConversationService (foreground service, real mic pipeline)
@@ -46,8 +48,6 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  *   ./gradlew connectedDebugAndroidTest \
  *     -Pandroid.testInstrumentationRunnerArguments.geminiApiKey=AIza...
- *
- * Everywhere else (PRs, local runs, plain release CI) they silently skip.
  */
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -81,16 +81,18 @@ class LiveAgentE2eTest {
         return t.isEmpty() || t == "(Audio response)" || t == "..."
     }
 
-    // ------------------------------------------------------------------
-    // Stage 1: provider level
-    // ------------------------------------------------------------------
+    /** Data collected from one provider session attempt. */
+    private class SessionResult(
+        val wentLive: Boolean,
+        val audioBytes: Int,
+        val finished: Boolean,
+        val heard: String,
+        val errors: List<String>,
+        val states: List<String>
+    )
 
-    @Test
-    fun stage1_providerLevel_realKey_fullToolSetup_agentResponds() {
-        val key = apiKeyFromRunner()
-        assumeTrue("geminiApiKey instrumentation arg not provided - skipping live E2E (normal CI run)", key != null)
-        val apiKey = key!!
-
+    /** Runs one full provider session: connect -> (optional) text turn -> disconnect. */
+    private fun runProviderSession(apiKey: String, includeTools: Boolean, turnText: String?): SessionResult {
         val liveLatch = CountDownLatch(1)
         val turnDone = CountDownLatch(1)
         val audioBytes = AtomicInteger(0)
@@ -105,6 +107,7 @@ class LiveAgentE2eTest {
             voiceName = "Puck",
             systemPrompt = "You are Mobile Agent, a professional on-device Android AI assistant. " +
                 "Reply to the user briefly and exactly as requested.",
+            includeTools = includeTools,
             listener = object : GeminiLiveWebSocket.Listener {
                 override fun onConnectionStateChanged(status: String) {
                     states.add(status)
@@ -139,36 +142,71 @@ class LiveAgentE2eTest {
 
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         try {
-            // --- Connect + setup (full production payload incl. all tool declarations) ---
             provider.connect(scope)
             val wentLive = liveLatch.await(45, TimeUnit.SECONDS)
-            assertTrue(
-                "Provider never reached LIVE state. states=$states errors=$errors",
-                wentLive
-            )
-
-            // --- Typed chat turn, exactly like ChatFragment -> service -> sendClientContent ---
-            provider.sendClientContent("Say exactly: PONG")
-            val finished = turnDone.await(90, TimeUnit.SECONDS)
-            val heard = synchronized(assistantText) { assistantText.toString() }.trim()
-            val audio = audioBytes.get()
-
-            assertTrue(
-                "Agent did not complete the turn within 90s. audio=${audio}B text='$heard' " +
-                    "errors=$errors states=$states",
-                finished
-            )
-            assertTrue(
-                "Agent completed the turn but produced NO audio response " +
-                    "(audio=${audio}B text='$heard' errors=$errors)",
-                audio > 500
-            )
-
-            android.util.Log.i("LiveAgentE2eTest",
-                "STAGE1 PASS: audio=${audio}B assistantText='$heard' toolCalls=$toolCalls")
+            var finished = false
+            var heard = ""
+            if (wentLive && turnText != null) {
+                provider.sendClientContent(turnText)
+                finished = turnDone.await(90, TimeUnit.SECONDS)
+                heard = synchronized(assistantText) { assistantText.toString() }.trim()
+            }
+            return SessionResult(wentLive, audioBytes.get(), finished, heard, errors.toList(), states.toList())
         } finally {
             provider.disconnect()
             scope.cancel()
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Stage 1: provider level (full production payload, with bare-payload fallback diagnostics)
+    // ------------------------------------------------------------------
+
+    @Test
+    fun stage1_providerLevel_realKey_fullToolSetup_agentResponds() {
+        val key = apiKeyFromRunner()
+        assumeTrue("geminiApiKey instrumentation arg not provided - skipping live E2E (normal CI run)", key != null)
+        val apiKey = key!!
+
+        // --- Attempt A: the EXACT production payload (all tool declarations). ---
+        val full = runProviderSession(apiKey, includeTools = true, turnText = "Say exactly: PONG")
+        if (full.wentLive && full.finished) {
+            assertTrue(
+                "Agent completed the turn but produced NO audio response " +
+                    "(audio=${full.audioBytes}B text='${full.heard}' errors=${full.errors})",
+                full.audioBytes > 500
+            )
+            android.util.Log.i("LiveAgentE2eTest",
+                "STAGE1 PASS (full production payload): audio=${full.audioBytes}B " +
+                    "assistantText='${full.heard}'")
+            return
+        }
+
+        // --- Attempt A failed. Run attempt B (bare payload, no tools) to isolate the cause. ---
+        Thread.sleep(20_000) // spacing for the free-tier Live RPM budget
+        val bare = runProviderSession(apiKey, includeTools = false, turnText = null)
+
+        val fullFailure = if (full.wentLive)
+            "connected LIVE but the turn never completed (audio=${full.audioBytes}B " +
+                "text='${full.heard}' errors=${full.errors})"
+        else
+            "never reached LIVE. errors=${full.errors} states=${full.states}"
+
+        if (bare.wentLive) {
+            // Bare setup works -> the tool declarations are the problem.
+            assertTrue(
+                "FULL PRODUCTION PAYLOAD REJECTED by Gemini while a bare no-tools setup " +
+                    "connects fine -> the problem is inside ToolRegistry.setupToolsJson(). " +
+                    "Full-payload failure: $fullFailure. Bare probe: LIVE OK.",
+                false
+            )
+        } else {
+            assertTrue(
+                "Gemini rejected BOTH the full payload and a bare no-tools setup -> " +
+                    "the problem is endpoint/key/model level, not the tool declarations. " +
+                    "Full: $fullFailure. Bare: errors=${bare.errors} states=${bare.states}",
+                false
+            )
         }
     }
 
@@ -195,6 +233,21 @@ class LiveAgentE2eTest {
         app.preferences.aiModel = GeminiConstants.DEFAULT_MODEL
         AgentConversationService.clearLiveError()
         app.chatRepository.clearHistory()
+
+        // The service refuses to start a session without these; grant them NOW —
+        // the app is installed (we are running inside it), unlike pre-install adb grants.
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        for (cmd in listOf(
+            "pm grant com.mobileagent.app android.permission.RECORD_AUDIO",
+            "pm grant com.mobileagent.app android.permission.POST_NOTIFICATIONS",
+            "dumpsys deviceidle whitelist +com.mobileagent.app"
+        )) {
+            try {
+                automation.executeShellCommand(cmd).close()
+            } catch (e: Exception) {
+                android.util.Log.w("LiveAgentE2eTest", "shell cmd failed: $cmd (${e.message})")
+            }
+        }
 
         ActivityScenario.launch(MainActivity::class.java).use {
             val ctx = InstrumentationRegistry.getInstrumentation().targetContext

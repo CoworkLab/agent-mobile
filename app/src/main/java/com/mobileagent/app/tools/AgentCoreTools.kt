@@ -48,7 +48,7 @@ object AgentCoreTools {
                 "handover, choosing between options, and for confirming risky or irreversible actions (sending messages, " +
                 "calls, deleting, installing, payments) BEFORE doing them.",
             ToolRegistry.p("question", "STRING", req = true),
-            ToolRegistry.p("options", "ARRAY", "quick choices as strings")
+            ToolRegistry.p("options", "ARRAY", "quick choices as strings", items = "STRING")
         ),
         ToolRegistry.t(
             "memory_save", "Save a durable fact or preference about the user (how to address them, likes, routines, contacts).",

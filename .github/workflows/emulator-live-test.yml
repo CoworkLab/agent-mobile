@@ -82,7 +82,7 @@ jobs:
             adb shell pm grant com.mobileagent.app android.permission.READ_CONTACTS || true
             adb shell pm grant com.mobileagent.app android.permission.POST_NOTIFICATIONS || true
             adb shell dumpsys deviceidle whitelist +com.mobileagent.app || true
-            ./gradlew connectedDebugAndroidTest --stacktrace --no-daemon -Pandroid.testInstrumentationRunnerArguments.geminiApiKey="$GEMINI_API_KEY" -Pandroid.testInstrumentationRunnerArguments.class=com.mobileagent.app.LiveAgentE2eTest
+            ./gradlew connectedDebugAndroidTest --stacktrace --no-daemon -Pandroid.testInstrumentationRunnerArguments.geminiApiKey="$GEMINI_API_KEY" -Pandroid.testInstrumentationRunnerArguments.class=com.mobileagent.app.LiveAgentE2eTest ; EC=$? ; adb logcat -d -v time > "$GITHUB_WORKSPACE/emulator-logcat.txt" ; exit $EC
 
       - name: Dump emulator logs on failure
         if: failure()

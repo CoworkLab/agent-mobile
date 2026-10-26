@@ -27,7 +27,7 @@ from gemini_live_protocol_test import (  # noqa: E402
 APP_MODELS = [
     ("models/gemini-3.1-flash-live-preview", True),   # Part 7 default, CRITICAL
     ("models/gemini-3.8-live", False),                # fallback
-    ("models/gemini-3.8-live-extended-thinking", False),  # third radio option
+    ("models/gemini-2.5-flash-native-audio-latest", False),  # third radio option
     ("models/gemini-3.1-flash-agent", None),          # legacy dead ID: must FAIL (kept as tombstone check)
 ]
 
@@ -73,16 +73,19 @@ def main():
     # a longer cooldown before we call it dead.
     def ws_turn(model, critical):
         print(f"\n=== WS turn test: {model} {'(CRITICAL default)' if critical else ''} ===")
-        r = run_variant(model, api_key, build_setup(model, SIMPLE_TOOLS),
-                        t_setup=30, t_turn=45)
+        setup = build_setup(model, SIMPLE_TOOLS)
+        # Mirror the app's exact wire payload: 2.5 native-audio models get
+        # thinking_budget=0 for instant conversational response.
+        if "2.5" in model:
+            setup["setup"]["generation_config"]["thinking_config"] = {"thinking_budget": 0}
+        r = run_variant(model, api_key, setup, t_setup=30, t_turn=45)
         if critical:
             return r
         quota_signature = (not r["setup_ok"]) or (r["error"] is None)
         if quota_signature:
             print(f"  ambiguous failure ({r['error'] or 'connected but no response'}) -> quota? retrying once in 60s")
             time.sleep(60)
-            r = run_variant(model, api_key, build_setup(model, SIMPLE_TOOLS),
-                            t_setup=30, t_turn=45)
+            r = run_variant(model, api_key, setup, t_setup=30, t_turn=45)
         return r
 
     results = {}

@@ -66,7 +66,7 @@ object CommunicationTools {
             ToolRegistry.p("hour", "INTEGER", "0-23", req = true),
             ToolRegistry.p("minute", "INTEGER", "0-59", req = true),
             ToolRegistry.p("label", "STRING"),
-            ToolRegistry.p("days", "ARRAY", "repeat days 1=Sun..7=Sat")),
+            ToolRegistry.p("days", "ARRAY", "repeat days 1=Sun..7=Sat", items = "INTEGER")),
         ToolRegistry.t("set_timer", "Start a countdown timer.",
             ToolRegistry.p("seconds", "INTEGER", req = true),
             ToolRegistry.p("label", "STRING")),

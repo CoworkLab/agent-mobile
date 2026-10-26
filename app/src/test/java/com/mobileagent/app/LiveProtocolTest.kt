@@ -191,7 +191,7 @@ class LiveProtocolTest {
         // Part 7's exact default: the known-working preview model.
         assertEquals(GeminiConstants.MODEL_3_1_FLASH, GeminiConstants.DEFAULT_MODEL)
         assertTrue(GeminiConstants.MODEL_3_8_LIVE in models)
-        assertTrue(GeminiConstants.MODEL_3_8_LIVE_THINKING in models)
+        assertTrue(GeminiConstants.MODEL_2_5_NATIVE_AUDIO in models)
         // The dead legacy ID must never be offered again.
         assertFalse(GeminiConstants.LEGACY_MODEL_3_1_FLASH_AGENT in models)
     }

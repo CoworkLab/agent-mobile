@@ -5,7 +5,7 @@ import com.google.gson.annotations.SerializedName
 object GeminiConstants {
     const val MODEL_3_1_FLASH = "models/gemini-3.1-flash-live-preview"
     const val MODEL_3_8_LIVE = "models/gemini-3.8-live"
-    const val MODEL_3_8_LIVE_THINKING = "models/gemini-3.8-live-extended-thinking"
+    const val MODEL_2_5_NATIVE_AUDIO = "models/gemini-2.5-flash-native-audio-latest"
 
     /** Legacy ID saved by older builds. Dead model (server closes the socket) —
      *  normalized to the default model at connect time. */
@@ -20,7 +20,7 @@ object GeminiConstants {
     val SUPPORTED_MODELS = listOf(
         MODEL_3_1_FLASH,
         MODEL_3_8_LIVE,
-        MODEL_3_8_LIVE_THINKING
+        MODEL_2_5_NATIVE_AUDIO
     )
 
     const val DEFAULT_LANGUAGE = "Auto"

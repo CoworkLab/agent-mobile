@@ -301,7 +301,7 @@
                     android:id="@+id/rbModelFlash15"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="gemini-3.8-live-extended-thinking (Deep Reasoning • Complex Tasks)"
+                    android:text="gemini-2.5-flash-native-audio-latest (Stable Native Audio • Battle-Tested)"
                     android:textColor="?attr/themeTextPrimary"
                     android:textSize="13sp"
                     android:fontFamily="sans-serif-medium"

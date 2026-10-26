@@ -17,7 +17,10 @@ class GeminiLiveWebSocket(
     private val model: String,
     private val voiceName: String,
     private val systemPrompt: String,
-    private val listener: Listener
+    private val listener: Listener,
+    /** Production always sends the full tool registry. Tests may disable it to
+     *  isolate payload problems (bare Part 7-style setup without tools). */
+    private val includeTools: Boolean = true
 ) {
     interface Listener {
         fun onConnectionStateChanged(status: String)
@@ -45,7 +48,7 @@ class GeminiLiveWebSocket(
 
     private var activeModel: String = when (model) {
         GeminiConstants.MODEL_3_8_LIVE -> GeminiConstants.MODEL_3_8_LIVE
-        GeminiConstants.MODEL_3_8_LIVE_THINKING -> GeminiConstants.MODEL_3_8_LIVE_THINKING
+        GeminiConstants.MODEL_2_5_NATIVE_AUDIO -> GeminiConstants.MODEL_2_5_NATIVE_AUDIO
         // Legacy dead ID saved by older builds: run on the default Live model.
         GeminiConstants.LEGACY_MODEL_3_1_FLASH_AGENT -> GeminiConstants.MODEL_3_1_FLASH
         else -> if (model.isNotBlank() && !model.contains("2.5")) model else GeminiConstants.DEFAULT_MODEL
@@ -169,7 +172,7 @@ class GeminiLiveWebSocket(
                         listener.onError("Gemini setup was rejected: $reason", isFatal = true, errorCode = "SETUP_REJECTED")
                         listener.onConnectionStateChanged("OFFLINE")
                     } else if (!isManuallyStopped.get()) {
-                        listener.onError("Connection lost (${code}). Retrying...", isFatal = false, errorCode = "CONNECTION_ERROR")
+                        listener.onError("Connection lost ($code)${if (reason.isNotBlank()) ": $reason" else ""}. Retrying...", isFatal = false, errorCode = "CONNECTION_ERROR")
                         listener.onConnectionStateChanged("RECONNECTING...")
                         scheduleReconnect()
                     } else {
@@ -255,7 +258,9 @@ class GeminiLiveWebSocket(
                         })
                     }
                 })
-                put("tools", com.mobileagent.app.tools.ToolRegistry.setupToolsJson())
+                if (includeTools) {
+                    put("tools", com.mobileagent.app.tools.ToolRegistry.setupToolsJson())
+                }
             })
         }
         val json = setup.toString()

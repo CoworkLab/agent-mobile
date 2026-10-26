@@ -59,7 +59,7 @@ class ApiConnectionActivity : AppCompatActivity() {
 
         when (preferences.aiModel) {
             GeminiConstants.MODEL_3_8_LIVE -> binding.rbModelFlash20.isChecked = true
-            GeminiConstants.MODEL_3_8_LIVE_THINKING,
+            GeminiConstants.MODEL_2_5_NATIVE_AUDIO,
             GeminiConstants.LEGACY_MODEL_3_1_FLASH_AGENT -> binding.rbModelFlash15.isChecked = true
             else -> binding.rbModelFlashThinking.isChecked = true
         }
@@ -157,7 +157,7 @@ class ApiConnectionActivity : AppCompatActivity() {
 
         val selectedModel = when (binding.rgModelGroup.checkedRadioButtonId) {
             binding.rbModelFlash20.id -> GeminiConstants.MODEL_3_8_LIVE
-            binding.rbModelFlash15.id -> GeminiConstants.MODEL_3_8_LIVE_THINKING
+            binding.rbModelFlash15.id -> GeminiConstants.MODEL_2_5_NATIVE_AUDIO
             else -> GeminiConstants.MODEL_3_1_FLASH
         }
 
