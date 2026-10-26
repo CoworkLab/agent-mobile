@@ -31,6 +31,7 @@ jobs:
 
   emulator-live-e2e:
     name: Real Android emulator E2E (agent must respond)
+    needs: verify-models
     runs-on: ubuntu-latest
     env:
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -70,23 +71,18 @@ jobs:
           target: google_apis
           arch: x86_64
           emulator-boot-timeout: 900
+          # NOTE: android-emulator-runner executes the script LINE BY LINE
+          # (each line in its own `sh -c`), so every command below must be a
+          # self-contained single line: no if/fi, no multi-line loops, no
+          # comments, no line continuations.
           script: |
-            if [ -z "$GEMINI_API_KEY" ]; then
-              echo "SKIP: add repo secret GEMINI_API_KEY to enable the live E2E."
-              exit 0
-            fi
             adb wait-for-device
-            # Reproduce a real user's granted-permission phone as closely as possible:
-            # the service requires RECORD_AUDIO + notifications + battery-optimization
-            # exemption before it will start a conversation session.
-            for perm in android.permission.RECORD_AUDIO android.permission.CALL_PHONE \
-                        android.permission.READ_CONTACTS android.permission.POST_NOTIFICATIONS; do
-              adb shell pm grant com.mobileagent.app $perm 2>/dev/null || true
-            done
+            adb shell pm grant com.mobileagent.app android.permission.RECORD_AUDIO || true
+            adb shell pm grant com.mobileagent.app android.permission.CALL_PHONE || true
+            adb shell pm grant com.mobileagent.app android.permission.READ_CONTACTS || true
+            adb shell pm grant com.mobileagent.app android.permission.POST_NOTIFICATIONS || true
             adb shell dumpsys deviceidle whitelist +com.mobileagent.app || true
-            ./gradlew connectedDebugAndroidTest --stacktrace --no-daemon \
-              -Pandroid.testInstrumentationRunnerArguments.geminiApiKey="$GEMINI_API_KEY" \
-              -Pandroid.testInstrumentationRunnerArguments.class=com.mobileagent.app.LiveAgentE2eTest
+            ./gradlew connectedDebugAndroidTest --stacktrace --no-daemon -Pandroid.testInstrumentationRunnerArguments.geminiApiKey="$GEMINI_API_KEY" -Pandroid.testInstrumentationRunnerArguments.class=com.mobileagent.app.LiveAgentE2eTest
 
       - name: Dump emulator logs on failure
         if: failure()

@@ -67,11 +67,27 @@ def main():
         print("  (none listed!)")
 
     # ---------- 2. WS live-turn verification per app model ----------
-    results = {}
-    for model, critical in APP_MODELS:
+    # Free-tier Live API quota is tight: a session can be closed or silently
+    # stalled for RPM reasons that have nothing to do with the model. So a
+    # non-default model that fails WITHOUT a JSON error gets ONE retry after
+    # a longer cooldown before we call it dead.
+    def ws_turn(model, critical):
         print(f"\n=== WS turn test: {model} {'(CRITICAL default)' if critical else ''} ===")
         r = run_variant(model, api_key, build_setup(model, SIMPLE_TOOLS),
                         t_setup=30, t_turn=45)
+        if critical:
+            return r
+        quota_signature = (not r["setup_ok"]) or (r["error"] is None)
+        if quota_signature:
+            print(f"  ambiguous failure ({r['error'] or 'connected but no response'}) -> quota? retrying once in 60s")
+            time.sleep(60)
+            r = run_variant(model, api_key, build_setup(model, SIMPLE_TOOLS),
+                            t_setup=30, t_turn=45)
+        return r
+
+    results = {}
+    for model, critical in APP_MODELS:
+        r = ws_turn(model, critical)
         ok = r["setup_ok"] and (r["audio"] > 0 or r["turn_complete"])
         results[model] = (ok, critical, r)
         if ok:
@@ -79,7 +95,7 @@ def main():
                   f"out={r['transcript_out'][:80]!r}")
         else:
             print(f"  FAIL: {r['error']}")
-        time.sleep(25)  # respect free-tier Live RPM
+        time.sleep(40)  # respect free-tier Live RPM
 
     print("\n" + "=" * 70)
     print("APP MODEL VERDICTS")
