@@ -625,6 +625,7 @@ class AgentConversationService : Service() {
         activeInstance = this
         createChannel()
         initTts()
+        registerNetworkWatchdog()
         headsetAudioRouter = com.mobileagent.app.audio.HeadsetAudioRouter(applicationContext)
         taskProgressOverlay = com.mobileagent.app.ui.agent.TaskProgressOverlay(this)
         taskProgressOverlayJob = serviceScope.launch(Dispatchers.Main.immediate) {
@@ -661,6 +662,13 @@ class AgentConversationService : Service() {
                     Log.w("AgentService", "Accessibility was disabled during an active task; clearing task progress")
                     isAutonomousTaskRunning = false
                     com.mobileagent.app.automation.agent.AgentTaskEngine.resetForSession()
+                }
+                // Vosk supervisor: if standby is on but the wake listener died silently
+                // (native crash, audio-focus steal), resurrect it instead of staying deaf forever.
+                if (_isStandby.value && voskSpeechService == null &&
+                    com.mobileagent.app.audio.VoskModelManager.isModelReady.value) {
+                    Log.w("AgentService", "Standby watchdog: wake listener missing - restarting Vosk")
+                    startWakeListening()
                 }
                 val snapshot = com.mobileagent.app.automation.agent.AgentTaskEngine.taskState.value
                 val prefs = (application as AgentApp).preferences
@@ -1020,16 +1028,20 @@ class AgentConversationService : Service() {
                                 }
                                 // Deliver chat messages typed while connecting/standby.
                                 flushPendingChatMessages()
-                                // Reset autonomous task state on fresh connection
-                                isAutonomousTaskRunning = false
-                                isAutonomousContinuationTurn = false
-                                synchronized(autonomousAudioLock) {
-                                    autonomousAudioBuffer.clear()
-                                    autonomousAudioBufferBytes = 0
+                                // Reset autonomous task state on a FRESH connection only.
+                                // The planned 9-minute renewal must NOT erase a running task.
+                                val wasPlannedRenewal = liveWebSocket?.consumePlannedRenewal() == true
+                                if (!wasPlannedRenewal) {
+                                    isAutonomousTaskRunning = false
+                                    isAutonomousContinuationTurn = false
+                                    synchronized(autonomousAudioLock) {
+                                        autonomousAudioBuffer.clear()
+                                        autonomousAudioBufferBytes = 0
+                                    }
+                                    autonomousStepCount = 0
+                                    autonomousLoopJob?.cancel()
+                                    autonomousLoopJob = null
                                 }
-                                autonomousStepCount = 0
-                                autonomousLoopJob?.cancel()
-                                autonomousLoopJob = null
                                 if (_conversationState.value != ConversationState.SPEAKING && _conversationState.value != ConversationState.THINKING) {
                                     setConversationState(ConversationState.IDLE)
                                 }
@@ -1462,6 +1474,15 @@ class AgentConversationService : Service() {
                             Log.e("AgentService", "GeminiLive onError: fatal=$isFatal, code=$errorCode, msg=$message")
                             updateNotification()
                             serviceScope.launch { _events.emit(message) }
+                            if (isFatal && !_isStandby.value) {
+                                // NEVER park in a dead "live" session (the old zombie: UI on, socket dead,
+                                // ears closed). Fall back to standby so the wake word keeps the agent
+                                // reachable and the error card tells the user what to fix.
+                                serviceScope.launch {
+                                    _events.emit("Agent fell back to standby after a fatal connection error. It stays reachable via \"Hey Agent\".")
+                                    enterStandby(announce = false)
+                                }
+                            }
                             when (errorCode) {
                                 "API_KEY_INVALID" -> {
                                     _liveError.value = AgentLiveError(
@@ -3508,6 +3529,7 @@ class AgentConversationService : Service() {
         taskProgressOverlayJob = null
         taskProgressOverlay?.remove()
         taskProgressOverlay = null
+        unregisterNetworkWatchdog()
         stopActiveConversation()
         exitStandbyListening()
         try {
@@ -3596,6 +3618,34 @@ class AgentConversationService : Service() {
     }
 
     private var lastNotifiedAt = 0L
+    private var networkWatchdog: ConnectivityManager.NetworkCallback? = null
+
+    /** Reconnect the moment the network returns instead of waiting out the backoff timer. */
+    private fun registerNetworkWatchdog() {
+        if (networkWatchdog != null) return
+        val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: android.net.Network) {
+                if (_isSessionOn.value && liveWebSocket?.isSessionReady() != true) {
+                    liveWebSocket?.reconnectNow()
+                }
+            }
+        }
+        try {
+            cm.registerDefaultNetworkCallback(callback)
+            networkWatchdog = callback
+        } catch (e: Exception) {
+            Log.d("AgentService", "Network watchdog unavailable: ${e.message}")
+        }
+    }
+
+    private fun unregisterNetworkWatchdog() {
+        val cb = networkWatchdog ?: return
+        networkWatchdog = null
+        try {
+            (getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager)?.unregisterNetworkCallback(cb)
+        } catch (_: Exception) {}
+    }
 
     private fun updateNotification() {
         // Throttle: transcription chunks and state flips used to rebuild + re-post the whole

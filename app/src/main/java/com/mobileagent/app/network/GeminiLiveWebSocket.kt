@@ -58,6 +58,9 @@ class GeminiLiveWebSocket(
     private val isConnected = AtomicBoolean(false)
     private val isSetupComplete = AtomicBoolean(false)
     private val isManuallyStopped = AtomicBoolean(false)
+    /** Set right before the PLANNED 9-minute renewal close; consumed by the service on the next
+     *  LIVE event so it does NOT reset autonomous task state or flash an error card for it. */
+    private val plannedRenewal = AtomicBoolean(false)
     private var coroutineScope: CoroutineScope? = null
 
     private var sessionRenewalJob: Job? = null
@@ -66,6 +69,19 @@ class GeminiLiveWebSocket(
     var promptProvider: (() -> String)? = null
 
     fun isSessionReady(): Boolean = isConnected.get() && isSetupComplete.get()
+
+    /** True once if the last drop was the planned session renewal (and clears the flag). */
+    fun consumePlannedRenewal(): Boolean = plannedRenewal.compareAndSet(true, false)
+
+    /** Immediate reconnect (network came back) - bypasses the exponential backoff wait. */
+    fun reconnectNow() {
+        if (isManuallyStopped.get()) return
+        reconnectJob?.cancel()
+        coroutineScope?.launch(Dispatchers.IO) {
+            Log.i(TAG, "Network restored - reconnecting immediately")
+            initiateConnection()
+        }
+    }
 
     fun connect(scope: CoroutineScope) {
         coroutineScope = scope
@@ -171,12 +187,18 @@ class GeminiLiveWebSocket(
                     if (code == 1008) {
                         listener.onError("Gemini setup was rejected: $reason", isFatal = true, errorCode = "SETUP_REJECTED")
                         listener.onConnectionStateChanged("OFFLINE")
-                    } else if (!isManuallyStopped.get()) {
+                    } else if (isManuallyStopped.get()) {
+                        listener.onConnectionStateChanged("OFFLINE")
+                    } else if (plannedRenewal.get() || reason.contains("Session renewal", ignoreCase = true)) {
+                        // Planned 9-minute renewal: reconnect silently, no error card, no state reset.
+                        Log.i(TAG, "Planned session renewal close - reconnecting seamlessly")
+                        listener.onConnectionStateChanged("RECONNECTING...")
+                        reconnectAttempts = 0
+                        scheduleReconnect()
+                    } else {
                         listener.onError("Connection lost ($code)${if (reason.isNotBlank()) ": $reason" else ""}. Retrying...", isFatal = false, errorCode = "CONNECTION_ERROR")
                         listener.onConnectionStateChanged("RECONNECTING...")
                         scheduleReconnect()
-                    } else {
-                        listener.onConnectionStateChanged("OFFLINE")
                     }
                 }
 
@@ -562,6 +584,7 @@ class GeminiLiveWebSocket(
             delay(GeminiConstants.SESSION_RENEWAL_MS)
             if (isActive && !isManuallyStopped.get()) {
                 Log.d(TAG, "9-minute session threshold reached. Seamlessly renewing session...")
+                plannedRenewal.set(true)
                 webSocket?.close(1000, "Session renewal")
             }
         }

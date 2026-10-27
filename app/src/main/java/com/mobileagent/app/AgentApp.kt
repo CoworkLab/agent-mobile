@@ -61,6 +61,7 @@ class AgentApp : Application() {
     override fun onCreate() {
         super.onCreate()
         SecurityManager.verify(this)
+        installCrashResilience()
         instance = this
         preferences = AppPreferences(this)
         chatRepository = ChatRepository(preferences)
@@ -149,6 +150,26 @@ class AgentApp : Application() {
             act.moveTaskToBack(true)
         } catch (e: Exception) {
             false
+        }
+    }
+
+    /**
+     * Crash resilience: persist the stack trace, then let the default handler kill the process.
+     * The conversation service is START_STICKY, so the OS restarts it and the agent returns in
+     * standby (wake word live) instead of staying dead until the user reopens the app.
+     */
+    private fun installCrashResilience() {
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                val ts = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+                    .format(java.util.Date())
+                java.io.File(filesDir, "last_crash.txt").writeText(
+                    "$ts thread=${thread.name}\n${android.util.Log.getStackTraceString(throwable)}"
+                )
+            } catch (_: Exception) {
+            }
+            defaultHandler?.uncaughtException(thread, throwable)
         }
     }
 
