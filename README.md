@@ -15,7 +15,27 @@ messages, files, web, and scheduling.
 - Min Android: 8.0 (API 26) · Compile/Target SDK: 34 · Kotlin/JVM 17
 - Version: 2.1.0 (version code 201)
 
-## Agent capabilities (100 tools + native Google Search grounding)
+## What's new in v2.4.0
+
+- **Gesture accuracy**: pinch in/out geometry fixed (mode=in now truly zooms IN), real double_tap,
+  on-screen clamping for fling/scroll/pinch, blocking gesture dispatch (no more fake successes),
+  long-press floor 600 ms, WhatsApp delete flow confirms before advancing.
+- **Tap precision**: `click_ui_element` is now declared to the model (normalized 0-1000 coords +
+  snap to nearest clickable node), screenshot tool returns image size + teaches the coordinate
+  mapping, node bounds print unambiguously, device-specific click relocation removed.
+- **Performance**: single-pass accessibility-tree scan (no per-node binder parent-walk),
+  event-driven UI waits, contacts/launcher scans off the main thread with caching, owner-voice
+  verification off the mic thread, wake lock renewal, notification + log + bitmap churn cuts.
+- **True 24/7 autonomy**: fatal errors fall back to standby (wake word stays alive), autonomous
+  tasks survive the inactivity timer and the 9-minute session renewal, boot-start into standby,
+  crash handler + START_STICKY recovery, silent Vosk death watchdog, instant reconnect on
+  network restore.
+- **Skills + brain backup**: bundled pre-trained pattern pack (recents-close, force-stop, wifi,
+  battery saver, alarms, ...), runtime learning via `skill_save`, and a single-ZIP
+  **Export/Import Brain** in Settings (memories + skills + persona + chat + schedules).
+  API key and voice biometrics are never exported.
+
+## Agent capabilities (102 tools + skills layer)
 
 | Group | Tools |
 |---|---|
@@ -85,7 +105,7 @@ message telling the agent to ask you first.
 
 ```text
 app/src/main/java/com/mobileagent/app/
-├── tools/            100-tool agent framework (registry + 10 tool groups)
+├── tools/            102-tool agent framework (registry + 10 tool groups)
 ├── background/       Live conversation service (voice loop, autonomous engine)
 ├── network/          Gemini Live WebSocket
 ├── automation/       Accessibility service, commands, WhatsApp/YouTube/phone/contacts

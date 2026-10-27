@@ -1,0 +1,155 @@
+[
+  {
+    "name": "close_app_from_recents",
+    "triggers": ["recents me se", "recent apps me se", "recents se hata do", "recents se uda do", "recents se close kardo", "close from recents", "remove from recents", "close the running app", "recent apps se band karo", "recents me se youtube uda do", "recents me se app hatao"],
+    "steps": [
+      "Call the recents global action to open the Recents / app-switcher screen.",
+      "Call get_ui_tree and locate the card of the app the user named (match the app label text).",
+      "If the app's card is not visible, scroll sideways through the recents carousel until it appears.",
+      "Swipe the app card UP and off the top of the screen: swipe from the card's centre to about 250px above the top of the screen.",
+      "Re-observe with get_ui_tree: the card must be gone. If a 'No recent items' or the same card remains, retry the swipe once, then report honestly.",
+      "Press home to leave the recents screen and call done."
+    ],
+    "notes": "Swiping the card up kills the app from recents. Do NOT tap the card (that opens the app). Some launchers also show a floating 'Clear all' button - using it closes every app, so only use it when the user asked for all apps."
+  },
+  {
+    "name": "clear_all_recents",
+    "triggers": ["saare apps band karo", "all apps band karo", "clear all recents", "clear recents", "saare recents clear karo", "sab recents uda do", "close all running apps", "sab apps uda do"],
+    "steps": [
+      "Call the recents global action to open the Recents screen.",
+      "Call get_ui_tree and look for a button labelled 'Clear all', 'Sab clear karein', a broom or an X with 'N apps' text; if found, click it once.",
+      "If no clear-all button exists, repeatedly find the leftmost or rightmost visible app card and swipe it up off the screen, then re-observe, until the recents screen shows 'No recent items'.",
+      "Press home and call done."
+    ],
+    "notes": "Verify the 'No recent items' empty state before claiming success."
+  },
+  {
+    "name": "force_stop_app_via_settings",
+    "triggers": ["force stop", "app ko pura band karo", "app completely band karo", "app band nahi ho raha", "app hang ho gaya", "app crash ho raha hai band karo"],
+    "steps": [
+      "Find the app's package with get_app_info or list_installed_apps.",
+      "Call send_intent with action android.settings.APPLICATION_DETAILS_SETTINGS and data package:<package> to open the app's system settings page.",
+      "Call get_ui_tree and click 'Force stop'. If it is greyed out, report that the app is not running.",
+      "Confirm with a dialog tap if Android shows one, then call done."
+    ],
+    "notes": "Force stop is stronger than recents removal. Never uninstall unless the user explicitly says uninstall."
+  },
+  {
+    "name": "open_app_notification_settings",
+    "triggers": ["notification band karo", "notifications off karo", "app ki notification settings", "turn off notifications for", "app notification on karo"],
+    "steps": [
+      "Find the app's package with get_app_info.",
+      "Open the app's system settings page with send_intent action android.settings.APPLICATION_DETAILS_SETTINGS data package:<package>.",
+      "Click 'Notifications' in the settings list.",
+      "Toggle the master 'All notifications' switch with click_node to the requested state, verify the switch state changed, then call done."
+    ],
+    "notes": "read the switch state from get_ui_tree before and after to verify."
+  },
+  {
+    "name": "type_and_submit_search",
+    "triggers": ["search karke dikhao", "type karke search karo", "search karo aur open karo", "search and open", "type and search"],
+    "steps": [
+      "Click the search field with click_node (or tap its bounds centre from get_ui_tree).",
+      "Type the query with set_text or type_text; verify the readback text matches.",
+      "Press the keyboard search/enter via press_enter, or click the search icon button.",
+      "Wait for results with wait_for_idle, then get_ui_tree and click the best matching result.",
+      "Confirm the target screen loaded and call done."
+    ],
+    "notes": "Typing alone is never completion - the results click is part of the task."
+  },
+  {
+    "name": "youtube_search_then_user_picks",
+    "triggers": ["youtube pe search karo", "search on youtube", "youtube search", "youtube pe dhundo", "youtube me dhundo"],
+    "steps": [
+      "Call search_youtube with the query - do NOT auto-play anything.",
+      "Let the user pick from the visible results; ask which one if they do not say.",
+      "Only when the user names one, click that result with click_node."
+    ],
+    "notes": "Play requests (play/bajao/chalao/sunao) must use search_and_play_youtube instead."
+  },
+  {
+    "name": "wifi_toggle_via_settings",
+    "triggers": ["wifi on karo", "wifi off karo", "wifi chalu karo", "turn on wifi", "turn off wifi", "wifi band karo"],
+    "steps": [
+      "Call open_settings with target wifi (or send_intent android.settings.WIFI_SETTINGS).",
+      "get_ui_tree and find the Wi-Fi master switch; click it with click_node (is_toggle=true).",
+      "Verify the switch state flipped; call done."
+    ],
+    "notes": "Read the current state first so you toggle in the right direction."
+  },
+  {
+    "name": "enable_battery_saver",
+    "triggers": ["battery saver on karo", "battery saver", "battery saving mode", "battery bachao mode", "power saving mode on"],
+    "steps": [
+      "Call open_settings with target battery (or send_intent android.settings.BATTERY_SAVER_SETTINGS or android.settings.SETTINGS then search 'Battery').",
+      "get_ui_tree, find 'Battery Saver' and open it.",
+      "Click 'Use Battery Saver' / 'Turn on now' and verify the state, then call done."
+    ],
+    "notes": "Menu names differ across OEM skins; use find_element with fuzzy queries."
+  },
+  {
+    "name": "send_whatsapp_ui_fallback",
+    "triggers": ["whatsapp pe message bhejo", "whatsapp message send karo", "whatsapp par bhej do", "send whatsapp message"],
+    "steps": [
+      "Prefer send_whatsapp_message first (it drives the whole flow).",
+      "If that tool failed, open WhatsApp with open_app, click the search icon, type the contact name, click the matching contact row.",
+      "set_text the message in the message field, verify the readback.",
+      "ask_user once to confirm the send, then click the send button and verify the message bubble appears.",
+      "Call done with the honest result."
+    ],
+    "notes": "Always confirm the final send with ask_user unless the user already confirmed in the same request."
+  },
+  {
+    "name": "screenshot_and_share",
+    "triggers": ["screenshot leke bhejo", "screenshot karke share karo", "take a screenshot and share", "screen shot bhejo"],
+    "steps": [
+      "Call global_action screenshot (or press_key screenshot) to capture the screen.",
+      "Open the Photos or Screenshots folder with open_app Photos, find the newest screenshot at the top of the grid.",
+      "long_press the newest thumbnail to enter selection mode, click Share, choose the target app the user named.",
+      "Complete the share flow and call done."
+    ],
+    "notes": "If the user did not name a target app, ask_user which app to share to."
+  },
+  {
+    "name": "set_exact_alarm",
+    "triggers": ["alarm lagao", "alarm set karo", "subah ka alarm", "set an alarm", "alarm do"],
+    "steps": [
+      "Prefer set_alarm tool with the parsed time.",
+      "If the tool fails or the user wants a labelled/repeating alarm, open the Clock app with open_app Clock.",
+      "Click the add (+) button, set the hour and minute via the clock UI or type fields, toggle repeat days if asked, add a label if asked.",
+      "Verify the alarm list shows the new alarm and call done."
+    ],
+    "notes": "Confirm AM/PM carefully from the user's words (subah=AM, shaam/rat=PM)."
+  },
+  {
+    "name": "app_permission_grant_flow",
+    "triggers": ["permission de do", "permission allow karo", "grant permission", "app ko permission do", "location permission on karo"],
+    "steps": [
+      "Find the app's package with get_app_info.",
+      "Open the app's system settings with send_intent android.settings.APPLICATION_DETAILS_SETTINGS data package:<package>.",
+      "Click 'Permissions', then click the specific permission the user named.",
+      "Select 'Allow' or 'While using the app', go back, and call done."
+    ],
+    "notes": "Never grant 'Allow all the time' for location unless the user explicitly asked for it."
+  },
+  {
+    "name": "uninstall_app_flow",
+    "triggers": ["app uninstall karo", "app hatao", "delete the app", "uninstall kardo", "app delete karo"],
+    "steps": [
+      "Find the app's package with get_app_info and confirm the exact app with ask_user - uninstalling is irreversible.",
+      "Open the app's system settings with send_intent android.settings.APPLICATION_DETAILS_SETTINGS data package:<package>.",
+      "Click 'Uninstall', confirm the system dialog, verify the package is gone with get_app_info, then call done."
+    ],
+    "notes": "For launcher-drag uninstall, use open_app to the launcher and drag the icon to Uninstall only if the settings route fails."
+  },
+  {
+    "name": "repeat_last_task",
+    "triggers": ["phir se karo", "dobara karo", "same kaam phir se", "do it again", "repeat that", "ek aur baar karo"],
+    "steps": [
+      "Run memory_recall for the most recent task description or check the last chat turns in your context.",
+      "Re-run the same tool sequence on the current screen, re-observing between steps.",
+      "Report completion once, then call done."
+    ],
+    "notes": "If the previous task is unclear, ask_user which task to repeat instead of guessing."
+  }
+]

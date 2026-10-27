@@ -431,4 +431,70 @@ class AppPreferences(context: Context) {
     fun clearChatHistory() {
         prefs.edit().remove(KEY_CHAT_HISTORY).apply()
     }
+
+    // -----------------------------------------------------------------
+    // Brain backup (ZIP export/import). The API key and owner-voice
+    // biometric profile are deliberately EXCLUDED - never leave the device.
+    // -----------------------------------------------------------------
+
+    /** Non-secret, portable preferences as a JSON object keyed by their pref key. */
+    fun exportBackup(): org.json.JSONObject {
+        val o = org.json.JSONObject()
+        val stringKeys = listOf(
+            KEY_PERSONALITY, KEY_USER_NAME, KEY_FAVORITE_SONG, KEY_FAVORITE_APP,
+            KEY_USER_BIRTHDAY, KEY_USER_LOCATION, KEY_USER_AGE, KEY_DAILY_ROUTINE,
+            KEY_LANGUAGE, KEY_WAKE_WORDS, KEY_AGENT_TITLE, KEY_APP_THEME,
+            KEY_CUSTOM_THEME_COLOR, KEY_ORB_ANIMATION, KEY_ORB_SPEED, KEY_ORB_GLOW,
+            KEY_ORB_SCALE, KEY_ORB_HUE, KEY_VOICE, KEY_MODEL, KEY_TASK_OVERLAY_AVATAR,
+            KEY_TASK_OVERLAY_MODE, KEY_TASK_OVERLAY_EDGE
+        )
+        for (k in stringKeys) {
+            prefs.getString(k, null)?.let { o.put(k, it) }
+        }
+        val boolKeys = listOf(
+            KEY_MIC_MUTED, KEY_SILENT_EXECUTION_MODE, KEY_TASK_OVERLAY_ENABLED,
+            KEY_TASK_OVERLAY_FREE_POSITION
+        )
+        for (k in boolKeys) {
+            if (prefs.contains(k)) o.put(k, prefs.getBoolean(k, false))
+        }
+        val intKeys = listOf(KEY_TASK_OVERLAY_X, KEY_TASK_OVERLAY_Y)
+        for (k in intKeys) {
+            if (prefs.contains(k)) o.put(k, prefs.getInt(k, -1))
+        }
+        return o
+    }
+
+    /** Applies an exported preferences object; returns how many keys were applied. */
+    fun importBackup(data: org.json.JSONObject): Int {
+        var applied = 0
+        val editor = prefs.edit()
+        for (key in data.keys()) {
+            val v = data.get(key)
+            when (v) {
+                is Boolean -> editor.putBoolean(key, v)
+                is Int -> editor.putInt(key, v)
+                is Long -> editor.putLong(key, v)
+                else -> editor.putString(key, v.toString())
+            }
+            applied++
+        }
+        editor.apply()
+        return applied
+    }
+
+    /** Raw chat-history JSON for the backup ZIP. */
+    fun exportChatHistory(): org.json.JSONArray = try {
+        org.json.JSONArray(prefs.getString(KEY_CHAT_HISTORY, "[]") ?: "[]")
+    } catch (e: Exception) {
+        org.json.JSONArray()
+    }
+
+    /** Restores chat history from the backup ZIP. */
+    fun importChatHistory(json: String) {
+        try {
+            org.json.JSONArray(json)
+            prefs.edit().putString(KEY_CHAT_HISTORY, json).apply()
+        } catch (_: Exception) {}
+    }
 }

@@ -844,7 +844,11 @@ class AgentConversationService : Service() {
     private suspend fun generateCurrentSystemPrompt(): String {
         val app = application as? AgentApp ?: return ""
         return withContext(Dispatchers.IO) {
-            val memoryContext = app.memoryManager.getSystemPromptContext()
+            var memoryContext = app.memoryManager.getSystemPromptContext()
+            // Skills layer: proven step recipes (pre-trained + learned) ride into every session.
+            try {
+                app.skillManager.promptSection()?.let { memoryContext += it }
+            } catch (_: Exception) {}
             com.mobileagent.app.util.PromptGenerator.generateSystemPrompt(
                 personality = preferences.personality,
                 userName = preferences.userName,

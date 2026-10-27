@@ -62,6 +62,16 @@ object AgentCoreTools {
         ToolRegistry.t("memory_forget", "Delete matching saved memories.",
             ToolRegistry.p("keyword", "STRING", req = true)),
         ToolRegistry.t(
+            "skill_save", "Save a reusable multi-step SKILL so future sessions follow it automatically when a " +
+                "trigger phrase matches. Use it when the user teaches a way of working ('aage se aise karna...', " +
+                "'next time like this...') or when you discovered a genuinely reusable flow. Steps are plain " +
+                "instructions naming the tools to use, in order.",
+            ToolRegistry.p("name", "STRING", "short snake_case identifier, e.g. close_app_from_recents", req = true),
+            ToolRegistry.p("triggers", "ARRAY", "phrases that should activate this skill", req = true, items = "STRING"),
+            ToolRegistry.p("steps", "ARRAY", "ordered step instructions (which tool with which arguments)", req = true, items = "STRING"),
+            ToolRegistry.p("notes", "STRING", "when/how to use it, caveats")
+        ),
+        ToolRegistry.t(
             "update_plan", "Write or update your step plan for the current task; it is shown to the user.",
             ToolRegistry.p(
                 "steps", "ARRAY",
@@ -119,6 +129,21 @@ object AgentCoreTools {
                     value = value
                 )
                 ctx.ok("saved" to true, "id" to id, "key" to key)
+            }
+            "skill_save" -> {
+                val name = args.getString("name")
+                val triggers = mutableListOf<String>()
+                args.optJSONArray("triggers")?.let { arr ->
+                    for (i in 0 until arr.length()) triggers.add(arr.optString(i))
+                }
+                val steps = mutableListOf<String>()
+                args.optJSONArray("steps")?.let { arr ->
+                    for (i in 0 until arr.length()) steps.add(arr.optString(i))
+                }
+                val notes = args.optString("notes", "")
+                val (ok, msg) = ctx.app.skillManager.saveLearnedSkill(name, triggers, steps, notes)
+                if (ok) ctx.ok("saved" to true, "message" to msg, "name" to name)
+                else ctx.fail(msg)
             }
             "memory_recall" -> {
                 val query = args.getString("query")

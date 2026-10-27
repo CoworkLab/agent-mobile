@@ -40,6 +40,9 @@ class AgentApp : Application() {
     lateinit var memoryManager: MemoryManager
         private set
 
+    lateinit var skillManager: com.mobileagent.app.data.skills.SkillManager
+        private set
+
     lateinit var youTubePreferences: YouTubePreferences
         private set
 
@@ -70,6 +73,8 @@ class AgentApp : Application() {
         memoryDatabase = MemoryDatabase.getInstance(this)
         memoryRepository = MemoryRepository(memoryDatabase.memoryDao())
         memoryManager = MemoryManager(memoryRepository, preferences, chatRepository, appScope)
+        skillManager = com.mobileagent.app.data.skills.SkillManager(this, memoryDatabase.skillDao(), appScope)
+        skillManager.ensureBuiltinsLoaded()
 
         // Automation Systems
         youTubePreferences = YouTubePreferences(this)

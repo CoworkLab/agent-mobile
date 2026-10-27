@@ -9,17 +9,27 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.mobileagent.app.AgentApp
 import com.mobileagent.app.R
+import com.mobileagent.app.data.backup.BackupManager
 import com.mobileagent.app.data.model.GeminiConstants
 import com.mobileagent.app.databinding.FragmentSettingsBinding
 import com.mobileagent.app.ui.memory.MemoryActivity
 import com.mobileagent.app.ui.permission.PermissionActivity
+import com.mobileagent.app.ui.skills.SkillsActivity
 import com.mobileagent.app.ui.voice.VoiceEnrollmentActivity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class SettingsFragment : Fragment() {
 
@@ -161,6 +171,14 @@ class SettingsFragment : Fragment() {
             startActivity(Intent(requireContext(), MemoryActivity::class.java))
         }
 
+        binding.rowSkills.setOnClickListener {
+            startActivity(Intent(requireContext(), SkillsActivity::class.java))
+        }
+
+        binding.rowExportBrain.setOnClickListener { exportBrain() }
+
+        binding.rowImportBrain.setOnClickListener { importBrain() }
+
         binding.rowPermissions.setOnClickListener {
             startActivity(Intent(requireContext(), PermissionActivity::class.java))
         }
@@ -258,6 +276,73 @@ class SettingsFragment : Fragment() {
             }
             .setNegativeButton("Cancel", null)
             .show()
+    }
+
+    // ---- Brain backup (single ZIP via SAF) --------------------------------
+
+    private val exportBrainLauncher =
+        registerForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+            if (uri != null) runBrainExport(uri)
+        }
+
+    private val importBrainLauncher =
+        registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) runBrainImport(uri)
+        }
+
+    private fun exportBrain() {
+        val stamp = SimpleDateFormat("yyyyMMdd_HHmm", Locale.US).format(Date())
+        exportBrainLauncher.launch("mobile_agent_brain_$stamp.zip")
+    }
+
+    private fun importBrain() {
+        try {
+            importBrainLauncher.launch(arrayOf("application/zip", "application/octet-stream"))
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "No file picker available", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun runBrainExport(uri: Uri) {
+        val app = requireContext().applicationContext as AgentApp
+        val backup = BackupManager(requireContext().applicationContext, app.preferences, app.memoryDatabase)
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                requireContext().contentResolver.openOutputStream(uri)?.use { out ->
+                    backup.exportZip(out)
+                } ?: throw IllegalStateException("Cannot open destination")
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Brain exported. Keep the ZIP safe - it survives uninstall.", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Export failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    private fun runBrainImport(uri: Uri) {
+        val app = requireContext().applicationContext as AgentApp
+        val backup = BackupManager(requireContext().applicationContext, app.preferences, app.memoryDatabase)
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val summary = requireContext().contentResolver.openInputStream(uri)?.use { input ->
+                    backup.importZip(input)
+                } ?: throw IllegalStateException("Cannot open the selected file")
+                withContext(Dispatchers.Main) {
+                    MaterialAlertDialogBuilder(requireContext())
+                        .setTitle("Brain imported")
+                        .setMessage(summary)
+                        .setPositiveButton("Great", null)
+                        .show()
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(requireContext(), "Import failed: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
     }
 
     private fun openUrl(url: String) {

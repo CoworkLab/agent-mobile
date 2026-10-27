@@ -174,4 +174,34 @@ object ScheduleStore {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY, arr.toString()).apply()
     }
+    /** Raw task list JSON for the brain-backup ZIP (export). */
+    fun exportAll(context: Context): org.json.JSONArray = try {
+        org.json.JSONArray(
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "[]") ?: "[]"
+        )
+    } catch (e: Exception) {
+        org.json.JSONArray()
+    }
+
+    /** Merges an exported task list (import) and re-arms all alarms. */
+    fun importAll(context: Context, json: String) {
+        try {
+            val imported = org.json.JSONArray(json)
+            val existing = org.json.JSONArray(
+                context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, "[]") ?: "[]"
+            )
+            val seenIds = HashSet<String>()
+            for (i in 0 until existing.length()) seenIds.add(existing.optJSONObject(i)?.optString("id").orEmpty())
+            for (i in 0 until imported.length()) {
+                val o = imported.optJSONObject(i) ?: continue
+                if (seenIds.contains(o.optString("id"))) continue
+                existing.put(o)
+            }
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .edit().putString(KEY, existing.toString()).apply()
+            refresh(context)
+        } catch (e: Exception) {
+            android.util.Log.w("ScheduleStore", "Import failed: ${e.message}")
+        }
+    }
 }
