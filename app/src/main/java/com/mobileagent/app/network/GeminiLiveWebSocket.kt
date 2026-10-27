@@ -474,7 +474,10 @@ class GeminiLiveWebSocket(
                 })
             }
             webSocket?.send(msg.toString())
-            Log.d(TAG, "Sent tool_response for $functionName: $result")
+            // tool responses can embed whole screen summaries - never spam logcat with them in release.
+            if (com.mobileagent.app.BuildConfig.DEBUG) {
+                Log.d(TAG, "Sent tool_response for $functionName: ${result.take(300)}")
+            }
         } catch (e: Exception) {
             Log.e(TAG, "sendToolResponse failed: ${e.message}", e)
         }

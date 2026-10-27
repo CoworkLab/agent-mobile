@@ -479,6 +479,14 @@ class VisualTaskOrchestrator(
             if (AgentTaskEngine.isCancelled()) {
                 return@withContext UiWaitResult(false, latestRoot, latestElements, latestSignature, false, "Task was cancelled while waiting for UI")
             }
+            // EVENT-DRIVEN: only spend a full scan when the accessibility tree actually changed
+            // (or on a slow ~700ms fallback tick for silent transitions). The old loop re-scanned
+            // the whole tree every ~220ms - 10-30 full scans for a single tap wait.
+            val revision = AgentAccessibilityService.uiChanges.value.revision
+            val sawEvent = withTimeoutOrNull(400L) {
+                AgentAccessibilityService.uiChanges.first { it.revision > revision }
+                true
+            } ?: false
             latestRoot = service.getActiveRootNode()
             latestElements = groundingEngine.scanScreen(latestRoot)
             latestSignature = com.mobileagent.app.automation.agent.ScreenSignatureCalculator.computeSignature(latestRoot)
@@ -503,12 +511,7 @@ class VisualTaskOrchestrator(
                 stableSamples = 0
             }
             lastSignature = latestSignature
-            val revision = AgentAccessibilityService.uiChanges.value.revision
-            val waitedForEvent = withTimeoutOrNull(220L) {
-                AgentAccessibilityService.uiChanges.first { it.revision > revision }
-                true
-            } ?: false
-            if (!waitedForEvent) delay(100L)
+            if (!sawEvent) delay(300L)
         }
         AgentTaskEngine.updateActivity("UI did not become stable before the wait deadline", AgentTaskEngine.State.RECOVERING)
         UiWaitResult(false, latestRoot, latestElements, latestSignature,
@@ -1448,7 +1451,10 @@ class VisualTaskOrchestrator(
             }
         }
         val summary = screenSource + groundingEngine.formatElementsSummary(elements, root) + otpNotice
-        Log.i(TAG, "Screen inspection generated:\n$summary")
+        // Multi-KB screen dump on every inspection - DEBUG only in release builds.
+        if (com.mobileagent.app.BuildConfig.DEBUG) {
+            Log.i(TAG, "Screen inspection generated:\n${summary.take(800)}")
+        }
         return@withContext summary
     }
 

@@ -51,14 +51,15 @@ class CommandExecutor(
                     phoneManager.setVolumePercent(command.level)
                 }
             }
-            is AgentCommand.OpenApp -> phoneManager.openApp(command.packageName)
-            is AgentCommand.OpenWebUrls -> phoneManager.openMultipleUrls(command.urls)
-            is AgentCommand.PhoneCall -> phoneManager.makePhoneCall(command.contactOrNumber)
+            is AgentCommand.OpenApp -> withContext(Dispatchers.IO) { phoneManager.openApp(command.packageName) }
+            is AgentCommand.OpenWebUrls -> withContext(Dispatchers.IO) { phoneManager.openMultipleUrls(command.urls) }
+            is AgentCommand.PhoneCall -> withContext(Dispatchers.IO) { phoneManager.makePhoneCall(command.contactOrNumber) }
             is AgentCommand.SearchWeb -> phoneManager.searchWeb(command.query)
 
-            // WhatsApp
-            is AgentCommand.WhatsAppMessage -> whatsappAssistant.sendMessageDirectly(command.contact, command.message)
-            is AgentCommand.WhatsAppCall -> whatsappAssistant.makeCall(command.contact, command.video)
+            // WhatsApp: full contacts ContentProvider query + Levenshtein scoring used to run
+            // on the main thread - hundreds of ms of UI freeze per message/call command.
+            is AgentCommand.WhatsAppMessage -> withContext(Dispatchers.IO) { whatsappAssistant.sendMessageDirectly(command.contact, command.message) }
+            is AgentCommand.WhatsAppCall -> withContext(Dispatchers.IO) { whatsappAssistant.makeCall(command.contact, command.video) }
             is AgentCommand.WhatsAppDeleteMessage -> whatsappAssistant.deleteLastMessage(command.contact, command.forEveryone)
             is AgentCommand.ConfirmAction -> {
                 if (command.confirmed) {

@@ -211,7 +211,7 @@ class HomeFragment : Fragment() {
     private fun pushExternalAudio(amp: Float, bass: Float, high: Float) {
         if (!isPageLoaded) return
         val now = System.currentTimeMillis()
-        if (now - lastAudioPushTime < 33L) return // ~30 calls per second throttle
+        if (now - lastAudioPushTime < 80L) return // ~12fps is plenty for a smooth orb; 30fps JS-bridge calls churned the main thread
         lastAudioPushTime = now
         activity?.runOnUiThread {
             binding.orbWebView.evaluateJavascript("window.AgentOrb && window.AgentOrb.setExternalAudio($amp, $bass, $high);", null)

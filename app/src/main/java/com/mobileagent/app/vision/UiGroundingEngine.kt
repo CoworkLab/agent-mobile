@@ -88,81 +88,88 @@ class UiGroundingEngine {
 
     /**
      * Extracts all interactive or descriptive elements currently visible on the screen.
+     *
+     * Single-pass BFS with IN-MEMORY parent tracking. The old implementation called
+     * node.parent (a fresh binder round-trip) up to 3 times per node - on a busy screen
+     * with 500+ nodes that meant thousands of IPC calls per scan, stalling the whole
+     * automation pipeline. Parent links here come free from the descent itself.
      */
     fun scanScreen(root: AccessibilityNodeInfo?): List<UiElementInfo> {
         if (root == null) return emptyList()
         val elements = mutableListOf<UiElementInfo>()
         var nextId = 1
-
-        fun traverse(node: AccessibilityNodeInfo) {
-            val bounds = Rect()
-            node.getBoundsInScreen(bounds)
-
-            var text = node.text?.toString()?.trim() ?: ""
-            var desc = node.contentDescription?.toString()?.trim() ?: ""
-            val cls = node.className?.toString() ?: ""
-            val vid = node.viewIdResourceName ?: ""
-            var p = node.parent
-            var parentClickable = false
-            var depth = 0
-            while (p != null && depth < 3) {
-                if (p.isClickable) {
-                    parentClickable = true
-                    break
-                }
-                p = p.parent
-                depth++
-            }
-            val isClickable = node.isClickable || parentClickable
-            val isCheckable = node.isCheckable
-            val hasSetTextAction = node.actionList.any { 
-                it.id == AccessibilityNodeInfo.ACTION_SET_TEXT || it.id == AccessibilityNodeInfo.ACTION_PASTE 
-            }
-            val isEditable = node.isEditable || cls.contains("EditText", ignoreCase = true) || hasSetTextAction
-            val isScrollable = node.isScrollable
-
-            // If a clickable row/card has no direct text, extract combined text from its descendants
-            if (text.isBlank() && desc.isBlank() && node.childCount > 0 && isClickable) {
-                val childTexts = collectNodeText(node)
-                if (childTexts.isNotEmpty()) {
-                    text = childTexts.joinToString(" • ")
-                }
-            }
-
-            // Filter out 0-sized or offscreen invisible elements
-            val isVisible = bounds.width() > 5 && bounds.height() > 5
-
-            val isInteractiveOrMeaningful = isVisible && (
-                isClickable || isCheckable || isEditable || isScrollable ||
-                text.isNotBlank() || desc.isNotBlank()
-            )
-
-            if (isInteractiveOrMeaningful) {
-                elements.add(
-                    UiElementInfo(
-                        id = nextId++,
-                        text = text,
-                        contentDescription = desc,
-                        className = cls,
-                        viewId = vid,
-                        bounds = bounds,
-                        isClickable = isClickable,
-                        isCheckable = isCheckable,
-                        isChecked = node.isChecked,
-                        isEditable = isEditable,
-                        isScrollable = isScrollable
-                    )
-                )
-            }
-
-            for (i in 0 until node.childCount) {
-                val child = node.getChild(i) ?: continue
-                traverse(child)
-            }
-        }
+        val parentOf = java.util.IdentityHashMap<AccessibilityNodeInfo, AccessibilityNodeInfo?>()
+        val queue = ArrayDeque<AccessibilityNodeInfo>()
+        queue.add(root)
 
         try {
-            traverse(root)
+            while (queue.isNotEmpty()) {
+                val node = queue.removeFirst()
+                val bounds = Rect()
+                node.getBoundsInScreen(bounds)
+
+                var text = node.text?.toString()?.trim() ?: ""
+                var desc = node.contentDescription?.toString()?.trim() ?: ""
+                val cls = node.className?.toString() ?: ""
+                val vid = node.viewIdResourceName ?: ""
+
+                // Walk the in-memory parent chain (no binder calls) instead of node.parent.
+                var parentClickable = false
+                var cursor: AccessibilityNodeInfo? = parentOf[node]
+                var depth = 0
+                while (cursor != null && depth < 3) {
+                    if (cursor.isClickable) { parentClickable = true; break }
+                    cursor = parentOf[cursor]
+                    depth++
+                }
+                val isClickable = node.isClickable || parentClickable
+                val isCheckable = node.isCheckable
+                val hasSetTextAction = node.actionList.any {
+                    it.id == AccessibilityNodeInfo.ACTION_SET_TEXT || it.id == AccessibilityNodeInfo.ACTION_PASTE
+                }
+                val isEditable = node.isEditable || cls.contains("EditText", ignoreCase = true) || hasSetTextAction
+                val isScrollable = node.isScrollable
+
+                // If a clickable row/card has no direct text, extract combined text from its descendants
+                if (text.isBlank() && desc.isBlank() && node.childCount > 0 && isClickable) {
+                    val childTexts = collectNodeText(node)
+                    if (childTexts.isNotEmpty()) {
+                        text = childTexts.joinToString(" • ")
+                    }
+                }
+
+                // Filter out 0-sized or offscreen invisible elements
+                val isVisible = bounds.width() > 5 && bounds.height() > 5
+
+                val isInteractiveOrMeaningful = isVisible && (
+                    isClickable || isCheckable || isEditable || isScrollable ||
+                    text.isNotBlank() || desc.isNotBlank()
+                )
+
+                if (isInteractiveOrMeaningful) {
+                    elements.add(
+                        UiElementInfo(
+                            id = nextId++,
+                            text = text,
+                            contentDescription = desc,
+                            className = cls,
+                            viewId = vid,
+                            bounds = bounds,
+                            isClickable = isClickable,
+                            isCheckable = isCheckable,
+                            isChecked = node.isChecked,
+                            isEditable = isEditable,
+                            isScrollable = isScrollable
+                        )
+                    )
+                }
+
+                for (i in 0 until node.childCount) {
+                    val child = node.getChild(i) ?: continue
+                    parentOf[child] = node
+                    queue.add(child)
+                }
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Error traversing accessibility tree: ${e.message}")
         }
@@ -441,8 +448,12 @@ class UiGroundingEngine {
         for (spatial in spatialTerms) {
             if (combinedText.contains(spatial)) {
                 val normSpatial = spatial.replace(" ", "-")
+                // Classify against the observed screen extent - a hardcoded 1080x2400
+                // misclassified every other resolution.
+                val maxRight = elements.maxOfOrNull { it.bounds.right } ?: 1080
+                val maxBottom = elements.maxOfOrNull { it.bounds.bottom } ?: 2400
                 val matched = elements.filter { it.isImageOrThumbnail }.firstOrNull { el ->
-                    val elSpatial = getSpatialPosition(el.bounds, 1080, 2400).lowercase(Locale.ROOT)
+                    val elSpatial = getSpatialPosition(el.bounds, maxRight, maxBottom).lowercase(Locale.ROOT)
                     elSpatial == normSpatial
                 }
                 if (matched != null) return matched

@@ -55,6 +55,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -112,6 +113,7 @@ class AgentConversationService : Service() {
         private const val CHANNEL_ID = "agent_conversation"
         private const val NOTIFICATION_ID = 41
         private const val INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000L // 30 minutes before standby
+        private const val WAKE_LOCK_RENEWAL_MS = 30 * 60 * 1000L // wake lock re-armed every 30 min
         private const val STANDBY_COOLDOWN_MS = 2500L
 
         @Volatile private var activeInstance: AgentConversationService? = null
@@ -612,6 +614,7 @@ class AgentConversationService : Service() {
     private var tts: TextToSpeech? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: android.net.wifi.WifiManager.WifiLock? = null
+    private var wakeLockRenewalJob: Job? = null
     private var standbyActivatedTime = 0L
     @Volatile
     private var isPendingWakeGreeting = false
@@ -643,7 +646,9 @@ class AgentConversationService : Service() {
         serviceScope.launch(Dispatchers.Main.immediate) {
             var previousAvailability: List<Any>? = null
             while (isActive) {
-                delay(900L)
+                // 5s cadence: these are convenience checks, not hot-path work. The old 900ms
+                // forever-loop held CPU awake even in pure standby.
+                delay(5000L)
                 if (_isSessionOn.value &&
                     (!PermissionHelper.hasRecordAudioPermission(this@AgentConversationService) ||
                         !PermissionHelper.hasNotificationPermission(this@AgentConversationService))) {
@@ -1163,9 +1168,9 @@ class AgentConversationService : Service() {
                                 enterStandby(announce = true)
                                 return
                             }
-                            app.memoryManager.learnPreferencesFromConversation(currentTurnUserText.toString())
-                            // Do not run checkAndExecuteCommand on streaming chunks mid-speech!
-                            // Gemini Live onToolCall is the authoritative neural intent engine.
+                            // NOTE: preference learning intentionally runs once per completed
+                            // utterance (onTurnCompleted), not per streaming chunk - the old
+                            // per-chunk call re-ran ~9 regexes over ever-growing text (O(n^2)).
                         }
 
                         override fun onInterrupted() {
@@ -1697,19 +1702,27 @@ class AgentConversationService : Service() {
                                         currentUtteranceAudioStream.toByteArray()
                                     }
                                     if (audioBytes.size >= 16000 * 2 * 0.3) {
-                                        val match = com.mobileagent.app.audio.OwnerVoiceManager.verifySpeakerAudio(audioBytes, preferences)
-                                        if (match.isMatch || match.distance < match.threshold * 1.35f) {
-                                            lastOwnerVerifiedTimestamp = now
-                                            isCurrentTurnOwnerVoiceVerified = true
-                                            Log.i("AgentService", "Speech verification passed: Owner confirmed (dist: ${match.distance}, sim: ${match.similarityPercent}%)")
-                                            processPendingToolCalls(verified = true)
-                                        } else {
-                                            isCurrentTurnOwnerVoiceVerified = false
-                                            audioPlayer?.flush()
-                                            currentTurnAssistantText.clear()
-                                            _liveAssistantResponse.value = ""
-                                            Log.w("AgentService", "Speech verification rejected: Non-owner (dist: ${match.distance}, thr: ${match.threshold})")
-                                            processPendingToolCalls(verified = false)
+                                        // OFF the mic thread: Kaldi x-vector extraction costs 0.5-2s of CPU
+                                        // and used to stall the 20ms audio loop (audible stutter).
+                                        // Also trim to the last 3 seconds - recent voice is what identifies.
+                                        val audioForVerify = if (audioBytes.size > 16000 * 2 * 3) {
+                                            audioBytes.copyOfRange(audioBytes.size - 16000 * 2 * 3, audioBytes.size)
+                                        } else audioBytes
+                                        serviceScope.launch(Dispatchers.Default) {
+                                            val match = com.mobileagent.app.audio.OwnerVoiceManager.verifySpeakerAudio(audioForVerify, preferences)
+                                            if (match.isMatch || match.distance < match.threshold * 1.35f) {
+                                                lastOwnerVerifiedTimestamp = System.currentTimeMillis()
+                                                isCurrentTurnOwnerVoiceVerified = true
+                                                Log.i("AgentService", "Speech verification passed: Owner confirmed (dist: ${match.distance}, sim: ${match.similarityPercent}%)")
+                                                processPendingToolCalls(verified = true)
+                                            } else {
+                                                isCurrentTurnOwnerVoiceVerified = false
+                                                audioPlayer?.flush()
+                                                currentTurnAssistantText.clear()
+                                                _liveAssistantResponse.value = ""
+                                                Log.w("AgentService", "Speech verification rejected: Non-owner (dist: ${match.distance}, thr: ${match.threshold})")
+                                                processPendingToolCalls(verified = false)
+                                            }
                                         }
                                     } else {
                                         isCurrentTurnOwnerVoiceVerified = !preferences.isOwnerVoiceEnabled || !preferences.hasOwnerVoiceProfile()
@@ -3103,6 +3116,9 @@ class AgentConversationService : Service() {
         inactivityJob = serviceScope.launch {
             while (isActive && _isSessionOn.value) {
                 delay(15_000)
+                // A running autonomous task outlives user silence - never standby mid-task.
+                if (isAutonomousTaskRunning ||
+                    com.mobileagent.app.automation.agent.AgentTaskEngine.current() != null) continue
                 if (System.currentTimeMillis() - lastUserSpeechDetectedTime >= INACTIVITY_TIMEOUT_MS) {
                     enterStandby(announce = false)
                 }
@@ -3155,10 +3171,10 @@ class AgentConversationService : Service() {
             Log.i("AgentService", "Vosk model still loading; triggering init and will start once ready")
             VoskModelManager.init(applicationContext, serviceScope)
             serviceScope.launch {
-                VoskModelManager.isModelReady.collect { ready ->
-                    if (ready && _isStandby.value && voskSpeechService == null) {
-                        startWakeListening()
-                    }
+                // first{} not collect{}: a new infinite collector per standby cycle leaked.
+                val ready = VoskModelManager.isModelReady.first { it }
+                if (ready && _isStandby.value && voskSpeechService == null) {
+                    startWakeListening()
                 }
             }
             return
@@ -3440,11 +3456,13 @@ class AgentConversationService : Service() {
     }
 
     private fun acquireWakeLock() {
-        if (wakeLock?.isHeld != true) {
-            wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
-                .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:AgentConversation")
-                .also { it.acquire(6 * 60 * 60 * 1000L) }
-        }
+        // Renew every 30 minutes instead of one 6-hour grant: the old single 6h ceiling meant
+        // that in deep standby the CPU could doze afterwards and the wake word went deaf.
+        wakeLock?.takeIf { it.isHeld }?.release()
+        wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
+            .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:AgentConversation")
+            .also { it.acquire(WAKE_LOCK_RENEWAL_MS) }
+        startWakeLockRenewal()
         if (wifiLock?.isHeld != true) {
             val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as? android.net.wifi.WifiManager
             wifiLock = wifiManager?.createWifiLock(
@@ -3458,7 +3476,27 @@ class AgentConversationService : Service() {
         }
     }
 
+    private fun startWakeLockRenewal() {
+        wakeLockRenewalJob?.cancel()
+        wakeLockRenewalJob = serviceScope.launch {
+            while (isActive) {
+                delay(WAKE_LOCK_RENEWAL_MS - 60_000L)
+                if (_isSessionOn.value || _isStandby.value) {
+                    // Re-arm the partial wake lock so 24/7 standby never dozes into deafness.
+                    wakeLock?.takeIf { it.isHeld }?.release()
+                    wakeLock = (getSystemService(POWER_SERVICE) as PowerManager)
+                        .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "$packageName:AgentConversation")
+                        .also { it.acquire(WAKE_LOCK_RENEWAL_MS) }
+                } else {
+                    break
+                }
+            }
+        }
+    }
+
     private fun releaseWakeLock() {
+        wakeLockRenewalJob?.cancel()
+        wakeLockRenewalJob = null
         wakeLock?.takeIf { it.isHeld }?.release()
         wakeLock = null
         wifiLock?.takeIf { it.isHeld }?.release()
@@ -3557,7 +3595,14 @@ class AgentConversationService : Service() {
         )
     }
 
+    private var lastNotifiedAt = 0L
+
     private fun updateNotification() {
+        // Throttle: transcription chunks and state flips used to rebuild + re-post the whole
+        // notification (2 PendingIntents + IPC) dozens of times per second.
+        val now = System.currentTimeMillis()
+        if (now - lastNotifiedAt < 1000L) return
+        lastNotifiedAt = now
         (getSystemService(NOTIFICATION_SERVICE) as NotificationManager)
             .notify(NOTIFICATION_ID, buildNotification())
     }

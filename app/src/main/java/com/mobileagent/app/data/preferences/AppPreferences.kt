@@ -304,37 +304,37 @@ class AppPreferences(context: Context) {
     var userBirthday: String
         get() = prefs.getString(KEY_USER_BIRTHDAY, "") ?: ""
         set(value) {
-            prefs.edit().putString(KEY_USER_BIRTHDAY, value.trim()).commit()
+            prefs.edit().putString(KEY_USER_BIRTHDAY, value.trim()).apply()
         }
 
     var userLocation: String
         get() = prefs.getString(KEY_USER_LOCATION, "") ?: ""
         set(value) {
-            prefs.edit().putString(KEY_USER_LOCATION, value.trim()).commit()
+            prefs.edit().putString(KEY_USER_LOCATION, value.trim()).apply()
         }
 
     var userAge: String
         get() = prefs.getString(KEY_USER_AGE, "") ?: ""
         set(value) {
-            prefs.edit().putString(KEY_USER_AGE, value.trim()).commit()
+            prefs.edit().putString(KEY_USER_AGE, value.trim()).apply()
         }
 
     var dailyRoutine: String
         get() = prefs.getString(KEY_DAILY_ROUTINE, "") ?: ""
         set(value) {
-            prefs.edit().putString(KEY_DAILY_ROUTINE, value.trim()).commit()
+            prefs.edit().putString(KEY_DAILY_ROUTINE, value.trim()).apply()
         }
 
     var favoriteSong: String
         get() = prefs.getString(KEY_FAVORITE_SONG, "") ?: ""
         set(value) {
-            prefs.edit().putString(KEY_FAVORITE_SONG, value.trim()).commit()
+            prefs.edit().putString(KEY_FAVORITE_SONG, value.trim()).apply()
         }
 
     var favoriteApp: String
         get() = prefs.getString(KEY_FAVORITE_APP, "") ?: ""
         set(value) {
-            prefs.edit().putString(KEY_FAVORITE_APP, value.trim()).commit()
+            prefs.edit().putString(KEY_FAVORITE_APP, value.trim()).apply()
         }
 
     var isMicMuted: Boolean
@@ -356,9 +356,11 @@ class AppPreferences(context: Context) {
             prefs.edit().putString(KEY_TASK_OVERLAY_AVATAR, value.takeIf { it in available } ?: "ghost").apply()
         }
 
-    /** always keeps the avatar visible while the service is alive; working limits it to active tasks. */
+    /** always keeps the avatar visible while the service is alive; working limits it to active tasks.
+     *  Default "working": a floating WebGL WebView over every app all day = constant GPU + IPC churn
+     *  that reads as system-wide lag. Users can still switch to "always" in settings. */
     var taskOverlayMode: String
-        get() = prefs.getString(KEY_TASK_OVERLAY_MODE, "always") ?: "always"
+        get() = prefs.getString(KEY_TASK_OVERLAY_MODE, "working") ?: "working"
         set(value) = prefs.edit().putString(KEY_TASK_OVERLAY_MODE, if (value == "working") "working" else "always").apply()
 
     /** Preferred dock edge. Dragging the overlay updates this to the closest edge. */

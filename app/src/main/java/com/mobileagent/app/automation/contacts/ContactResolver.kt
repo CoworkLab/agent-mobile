@@ -13,6 +13,7 @@ class ContactResolver(private val context: Context) {
 
     companion object {
         private const val TAG = "ContactResolver"
+        private const val CACHE_TTL_MS = 60_000L
 
         private val NICKNAME_MAP = mapOf(
             "mom" to listOf("mom", "mother", "mummy", "maa", "ammi"),
@@ -23,6 +24,14 @@ class ContactResolver(private val context: Context) {
             "husband" to listOf("husband", "hubby")
         )
     }
+
+    // Contact list cache: a full ContentProvider query + Levenshtein scoring used to run on the
+    // MAIN thread for every WhatsApp/call command (hundreds of ms of UI freeze per request).
+    @Volatile
+    private var cachedContacts: List<ContactInfo>? = null
+    @Volatile
+    private var cacheTime = 0L
+    private val cacheLock = Any()
 
     fun hasPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
@@ -102,7 +111,12 @@ class ContactResolver(private val context: Context) {
     }
 
     private fun loadAllContacts(): List<ContactInfo> {
-        val contacts = mutableListOf<ContactInfo>()
+        val cached = cachedContacts
+        if (cached != null && System.currentTimeMillis() - cacheTime < CACHE_TTL_MS) return cached
+        synchronized(cacheLock) {
+            val recheck = cachedContacts
+            if (recheck != null && System.currentTimeMillis() - cacheTime < CACHE_TTL_MS) return recheck
+            val contacts = mutableListOf<ContactInfo>()
         val projection = arrayOf(
             ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
@@ -149,7 +163,18 @@ class ContactResolver(private val context: Context) {
             Log.e(TAG, "Error querying contacts: ${e.message}", e)
         }
 
+        cachedContacts = contacts
+        cacheTime = System.currentTimeMillis()
         return contacts
+        }
+    }
+
+    /** Call when the user edits contacts so the next resolve re-queries immediately. */
+    fun invalidateCache() {
+        synchronized(cacheLock) {
+            cachedContacts = null
+            cacheTime = 0L
+        }
     }
 
     private fun calculateSimilarity(s1: String, s2: String): Float {

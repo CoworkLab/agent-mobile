@@ -2,11 +2,23 @@ package com.mobileagent.app.data.repository
 
 import com.mobileagent.app.data.model.ChatTurn
 import com.mobileagent.app.data.preferences.AppPreferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/**
+ * Persists chat turns OFF the caller thread: Gson-serializing up to 100 turns on the
+ * main thread froze every send. A single-writer IO scope + debounce coalesces bursts.
+ */
 class ChatRepository(private val preferences: AppPreferences) {
+
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var pendingSave: kotlinx.coroutines.Job? = null
 
     private val _turns = MutableStateFlow<List<ChatTurn>>(emptyList())
     val turns: StateFlow<List<ChatTurn>> = _turns.asStateFlow()
@@ -32,7 +44,7 @@ class ChatRepository(private val preferences: AppPreferences) {
             if (last.userTranscript == cleanUser && isPendingReply(last.agentResponse)) {
                 currentList[currentList.lastIndex] = last.copy(agentResponse = cleanAgent)
                 _turns.value = currentList
-                preferences.saveChatHistory(currentList)
+                persist(currentList)
                 return
             }
         }
@@ -55,7 +67,7 @@ class ChatRepository(private val preferences: AppPreferences) {
         }
 
         _turns.value = currentList
-        preferences.saveChatHistory(currentList)
+        persist(currentList)
     }
 
     /**
@@ -72,6 +84,14 @@ class ChatRepository(private val preferences: AppPreferences) {
         if (isPendingReply(last.agentResponse)) {
             currentList[currentList.lastIndex] = last.copy(agentResponse = clean)
             _turns.value = currentList
+            persist(currentList)
+        }
+    }
+
+    /** Debounced background persistence: replaces the previous queued save, never blocks the caller. */
+    private fun persist(currentList: List<ChatTurn>) {
+        pendingSave?.cancel()
+        pendingSave = ioScope.launch {
             preferences.saveChatHistory(currentList)
         }
     }
@@ -80,6 +100,10 @@ class ChatRepository(private val preferences: AppPreferences) {
     fun clearHistory() {
         _turns.value = emptyList()
         preferences.clearChatHistory()
+    }
+
+    fun shutdown() {
+        ioScope.cancel()
     }
 
     private fun isPendingReply(text: String): Boolean {
