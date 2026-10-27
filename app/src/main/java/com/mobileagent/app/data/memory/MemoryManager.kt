@@ -36,6 +36,12 @@ class MemoryManager(
         }
     }
 
+    /** Dynamic, memory-driven address prefix ("Arjun, "). Empty when no name is stored - NEVER a hardcoded honorific. */
+    private fun addrPrefix(): String {
+        val name = preferences.userName.trim()
+        return if (name.isBlank()) "" else "$name, "
+    }
+
     fun addShortTermTurn(userText: String, agentText: String) {
         val cleanUser = userText.trim()
         val cleanAgent = agentText.trim()
@@ -77,7 +83,7 @@ class MemoryManager(
             .trim()
 
         if (clean.isBlank()) {
-            return "I didn't catch what you'd like me to remember, Sir."
+            return "I didn't catch what you'd like me to remember."
         }
 
         learnPreferencesFromConversation(clean)
@@ -104,7 +110,7 @@ class MemoryManager(
             value = clean
         )
         Log.i(TAG, "Saved long-term memory in category '$category': $clean")
-        val response = "Sir, I have permanently committed that to memory: $clean."
+        val response = "${addrPrefix()}I have permanently committed that to memory: $clean."
         chatRepository.addTurn(clean, response)
         return response
     }
@@ -115,12 +121,12 @@ class MemoryManager(
             .trim()
 
         if (clean.isBlank()) {
-            return "Please tell me what you would like me to forget, Sir."
+            return "Please tell me what you would like me to forget."
         }
 
         val deletedCount = repository.deleteMemoriesByKeyword(clean)
         val response = if (deletedCount > 0) {
-            "Sir, I have erased $clean from my persistent memory."
+            "${addrPrefix()}I have erased $clean from my persistent memory."
         } else {
             "I couldn't find any memory matching '$clean'."
         }
@@ -131,12 +137,12 @@ class MemoryManager(
     suspend fun getWhatDoYouRemember(): String {
         val all = repository.getAllMemories()
         if (all.isEmpty()) {
-            return "My memory core is currently clear, Sir. Tell me anything about your life, habits, or preferences and I will never forget it."
+            return "My memory core is currently clear. Tell me anything about your life, habits, or preferences and I will never forget it."
         }
 
         val count = all.size
         val topFacts = all.take(6).joinToString(". ") { it.rawText }
-        val response = "Sir, I remember $count key facts about you in my Memory Core, including: $topFacts."
+        val response = "${addrPrefix()}I remember $count key facts about you in my Memory Core, including: $topFacts."
         chatRepository.addTurn("What do you remember about me?", response)
         return response
     }
@@ -146,7 +152,7 @@ class MemoryManager(
     suspend fun getBirthdayResponse(): String {
         val bday = preferences.userBirthday
         if (bday.isNotBlank()) {
-            val reply = "Sir, your birthday is $bday."
+            val reply = "${addrPrefix()}your birthday is $bday."
             chatRepository.addTurn("When is my birthday?", reply)
             return reply
         }
@@ -154,18 +160,18 @@ class MemoryManager(
         val mem = memories.firstOrNull()
         if (mem != null) {
             preferences.userBirthday = mem.value
-            val reply = "Sir, your birthday is ${mem.value}."
+            val reply = "${addrPrefix()}your birthday is ${mem.value}."
             chatRepository.addTurn("When is my birthday?", reply)
             return reply
         }
-        val notSet = "Sir, you haven't told me your birthday yet. You can tell me 'My birthday is 15th August' and I will save it."
+        val notSet = "${addrPrefix()}you haven't told me your birthday yet. You can tell me 'My birthday is 15th August' and I will save it."
         chatRepository.addTurn("When is my birthday?", notSet)
         return notSet
     }
 
     fun getFavoriteSongResponse(): String {
         val song = resolveSongQuery("my favorite song")
-        val reply = "Sir, your favorite song is $song."
+        val reply = "${addrPrefix()}your favorite song is $song."
         chatRepository.addTurn("What is my favorite song?", reply)
         return reply
     }
@@ -175,16 +181,16 @@ class MemoryManager(
         val routines = allMemories.filter { it.category == MemoryEntity.CATEGORY_ROUTINES }
         if (routines.isNotEmpty()) {
             val summary = routines.joinToString("; ") { it.rawText }
-            val reply = "Sir, here is your recorded daily routine: $summary."
+            val reply = "${addrPrefix()}here is your recorded daily routine: $summary."
             chatRepository.addTurn("What is my routine?", reply)
             return reply
         }
         if (preferences.dailyRoutine.isNotBlank()) {
-            val reply = "Sir, your daily routine is: ${preferences.dailyRoutine}."
+            val reply = "${addrPrefix()}your daily routine is: ${preferences.dailyRoutine}."
             chatRepository.addTurn("What is my routine?", reply)
             return reply
         }
-        val notSet = "Sir, you haven't recorded your routine yet. Tell me 'I wake up at 7 am' or 'I go to the gym at 6 pm' and I will save it."
+        val notSet = "${addrPrefix()}you haven't recorded your routine yet. Tell me 'I wake up at 7 am' or 'I go to the gym at 6 pm' and I will save it."
         chatRepository.addTurn("What is my routine?", notSet)
         return notSet
     }
@@ -424,7 +430,8 @@ class MemoryManager(
         val all = repository.getAllMemories()
         val favSong = resolveSongQuery("my favorite song")
         val sb = StringBuilder("\n[USER PERSONAL PROFILE & MEMORY CORE - PERMANENT STORAGE]:\n")
-        sb.append("- User's Preferred Name: ${preferences.userName.ifBlank { "Sir" }}\n")
+        val nameLine = preferences.userName.trim().ifBlank { "(no name stored yet)" }
+        sb.append("- User's Preferred Name: $nameLine\n")
         sb.append("- User's Birthday: ${preferences.userBirthday.ifBlank { "Not specified yet" }}\n")
         sb.append("- User's Known Favorite Song: $favSong\n")
         sb.append("- User's Favorite App: ${preferences.favoriteApp.ifBlank { "YouTube" }}\n")

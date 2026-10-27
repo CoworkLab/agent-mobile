@@ -13,7 +13,9 @@ import org.json.JSONObject
 /** Raised by tools when they cannot run; converted into a structured tool error response. */
 class ToolException(message: String) : Exception(message)
 
-fun Rect.shortString(): String = "[${left},${top} ${right}x${bottom}]"
+/** Bounds as "left,top -> right,bottom" in real screen pixels. Deliberately NOT width x height:
+ *  models used to misread "640x900" as dimensions and compute wrong centres. */
+fun Rect.shortString(): String = "[${left},${top}->${right},${bottom}]"
 
 fun AccessibilityNodeInfo.boundsInScreen(): Rect = Rect().also { getBoundsInScreen(it) }
 

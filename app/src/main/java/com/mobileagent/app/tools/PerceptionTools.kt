@@ -38,9 +38,12 @@ object PerceptionTools {
         ToolRegistry.t(
             "screenshot",
             "Capture the current screen (or a cropped region) and attach it visually for the next model turn. " +
-                "Use when the UI tree is empty or unclear (games, WebView, images, canvas UIs). This also acts as " +
-                "your OCR: read any text inside the image directly (signs, memes, scanned pages, video subtitles).",
-            ToolRegistry.p("region", "OBJECT", "optional crop in px {left, top, right, bottom}")
+                "The attached image is DOWNSCALED, so NEVER tap using pixel positions measured on the image - to click " +
+                "something you see here, call click_ui_element with normalized 0-1000 coordinates " +
+                "(image_px * 1000 / image_dimension). Use when the UI tree is empty or unclear (games, WebView, images, " +
+                "canvas UIs). This also acts as your OCR: read any text inside the image directly (signs, memes, " +
+                "scanned pages, video subtitles).",
+            ToolRegistry.p("region", "OBJECT", "optional crop in IMAGE pixels {left, top, right, bottom}")
         ),
         ToolRegistry.t(
             "read_screen_text", "Read all visible text on screen from the accessibility tree. Fast fallback when get_ui_tree is too long.",
@@ -48,7 +51,8 @@ object PerceptionTools {
         ),
         ToolRegistry.t("get_current_app", "Get the foreground app package name.", listOf<ToolRegistry.P>()),
         ToolRegistry.t(
-            "wait_for_element", "Wait until an element appears on screen or timeout.",
+            "wait_for_element", "Wait until an element appears on screen or timeout. " +
+                "Returns appeared=true/false plus the element when found.",
             ToolRegistry.p("query", "STRING", "text/desc/id to wait for", req = true),
             ToolRegistry.p("timeout_ms", "INTEGER", "default 5000")
         ),
@@ -110,24 +114,41 @@ object PerceptionTools {
                         "Screen capture unavailable: needs Screen Share granted or Android 11+ accessibility screenshot. " +
                             "Fall back to get_ui_tree."
                     )
-                var bmp: Bitmap? = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
                 val region = args.optJSONObject("region")
-                if (region != null && bmp != null) {
-                    val l = region.optInt("left", 0).coerceIn(0, bmp.width - 1)
-                    val t = region.optInt("top", 0).coerceIn(0, bmp.height - 1)
-                    val r = region.optInt("right", bmp.width).coerceIn(l + 1, bmp.width)
-                    val b = region.optInt("bottom", bmp.height).coerceIn(t + 1, bmp.height)
-                    val cropped = Bitmap.createBitmap(bmp, l, t, r - l, b - t)
-                    if (cropped != bmp) bmp.recycle()
-                    bmp = cropped
+                var sent = false
+                var imgW = 0; var imgH = 0
+                if (region == null) {
+                    // No crop: forward the already-encoded JPEG as-is (avoids a full decode + re-encode per call).
+                    val boundsOnly = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOnly)
+                    imgW = boundsOnly.outWidth; imgH = boundsOnly.outHeight
+                    sent = ctx.service.pushVisionFrame(bytes)
+                } else {
+                    var bmp: Bitmap? = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+                    if (bmp != null) {
+                        val l = region.optInt("left", 0).coerceIn(0, bmp.width - 1)
+                        val t = region.optInt("top", 0).coerceIn(0, bmp.height - 1)
+                        val r = region.optInt("right", bmp.width).coerceIn(l + 1, bmp.width)
+                        val b = region.optInt("bottom", bmp.height).coerceIn(t + 1, bmp.height)
+                        val cropped = Bitmap.createBitmap(bmp, l, t, r - l, b - t)
+                        if (cropped != bmp) bmp.recycle()
+                        bmp = cropped
+                        imgW = bmp.width; imgH = bmp.height
+                        val out = ByteArrayOutputStream2()
+                        bmp.compress(Bitmap.CompressFormat.JPEG, 72, out)
+                        bmp.recycle()
+                        sent = ctx.service.pushVisionFrame(out.toByteArray())
+                    }
                 }
-                val out = ByteArrayOutputStream2()
-                bmp?.compress(Bitmap.CompressFormat.JPEG, 72, out)
-                bmp?.recycle()
-                val sent = ctx.service.pushVisionFrame(out.toByteArray())
+                val scaleNote = if (imgW > 0) {
+                    "Attached image is ${imgW}x${imgH}px (downscaled from the real screen). To click what you see, " +
+                        "call click_ui_element with normalized 0-1000 coordinates (image_px * 1000 / image_dimension)."
+                } else "Capture failed; use get_ui_tree instead."
                 ctx.ok(
                     "captured" to sent,
-                    "note" to (if (sent) "Screenshot attached to this turn; look at the latest image." else "Capture failed; use get_ui_tree instead.")
+                    "image_width" to imgW,
+                    "image_height" to imgH,
+                    "note" to (if (sent) scaleNote else "Capture failed; use get_ui_tree instead.")
                 )
             }
             "read_screen_text" -> {

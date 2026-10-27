@@ -245,12 +245,14 @@ class AppPreferences(context: Context) {
         set(value) = prefs.edit().putString(KEY_PERSONALITY, value).apply()
 
     var userName: String
+        // Raw stored name; blank when unset. Callers decide their own display fallback.
+        // (The old implicit "Pro" default made the prompt's "no name stored" branch unreachable.)
         get() {
             val name = prefs.getString(KEY_USER_NAME, "") ?: ""
-            return if (name.isBlank() || name == "Salaam") "Pro" else name
+            return if (name.isBlank() || name == "Salaam") "" else name
         }
         set(value) {
-            prefs.edit().putString(KEY_USER_NAME, value.trim()).commit()
+            prefs.edit().putString(KEY_USER_NAME, value.trim()).apply()
         }
 
     var appTheme: String

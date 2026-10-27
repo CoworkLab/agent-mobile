@@ -832,13 +832,10 @@ class AgentConversationService : Service() {
         val app = application as? AgentApp ?: return ""
         return withContext(Dispatchers.IO) {
             val memoryContext = app.memoryManager.getSystemPromptContext()
-            val favSong = app.memoryManager.resolveSongQuery("my favorite song")
             com.mobileagent.app.util.PromptGenerator.generateSystemPrompt(
                 personality = preferences.personality,
                 userName = preferences.userName,
                 memoryContext = memoryContext,
-                favoriteSong = favSong,
-                userBirthday = preferences.userBirthday,
                 userLocation = preferences.userLocation,
                 isTorchOn = app.phoneControlManager.isTorchOn,
                 language = preferences.language,

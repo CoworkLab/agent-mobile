@@ -658,27 +658,10 @@ class VisualTaskOrchestrator(
                 return@withContext TaskActionResult(true, "Already tapped at this location. Waiting for UI update.")
             }
 
-            val isSubmitIntent = targetLower.contains("generate") || targetLower.contains("submit") ||
-                    targetLower.contains("arrow") || targetLower.contains("create") || targetLower.contains("enter") || targetLower.contains("send")
-
-            // Snap to exact Google Flow arrow button if target is submit/generate or coordinates are in the bottom-right action bar
-            // Only in a browser, and NEVER while the keyboard is open (the fixed spot is then the keyboard's Enter key).
-            if ((isSubmitIntent || (x >= 800 && y >= 880)) && !service.isKeyboardVisible()) {
-                if (isBrowser) {
-                    val wm = service.getSystemService(Context.WINDOW_SERVICE) as? WindowManager
-                    val realDm = DisplayMetrics()
-                    @Suppress("DEPRECATION")
-                    wm?.defaultDisplay?.getRealMetrics(realDm) ?: run {
-                        realDm.widthPixels = dm.widthPixels
-                        realDm.heightPixels = 2408
-                    }
-                    val exactArrowX = realDm.widthPixels * 0.9333f // Exactly 1008 on 1080p
-                    val exactArrowY = realDm.heightPixels * 0.9440f // Exactly 2273 on 2408p
-                    Log.i(TAG, "Snapping Generate/Submit arrow click from ($physicalX, $physicalY) -> exact button center ($exactArrowX, $exactArrowY)")
-                    physicalX = exactArrowX
-                    physicalY = exactArrowY
-                }
-            }
+            // NOTE: the old device-specific "snap to Google Flow arrow" relocation (0.9333 x 0.9440 of a
+            // 1080x2408 screen) was removed - it moved legitimate submit clicks to a fixed spot tuned for one
+            // device, landing off-target everywhere else. The snap-to-nearest-clickable-element above already
+            // provides precision on real nodes.
 
             lastClickTimestamp = System.currentTimeMillis()
             lastClickPhysicalX = physicalX
@@ -688,7 +671,7 @@ class VisualTaskOrchestrator(
             val preTapSignature = com.mobileagent.app.automation.agent.ScreenSignatureCalculator.computeSignature(rootBeforeVisualTap)
             AgentTaskEngine.setState(AgentTaskEngine.State.ACTING)
             val clicked = mutateUi("visual-click:$targetName") { service.clickAt(physicalX, physicalY) }
-            val tapDelay = if (isBrowser) 800L else 400L
+            val tapDelay = if (isBrowser) 500L else 250L
             delay(tapDelay)
             dispatchImmediateScreenFrame()
             val rootAfterVisualTap = service.getActiveRootNode()

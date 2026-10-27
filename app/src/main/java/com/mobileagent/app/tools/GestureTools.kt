@@ -22,12 +22,14 @@ object GestureTools {
     )
 
     fun tools(): List<ToolRegistry.T> = listOf(
-        ToolRegistry.t("tap", "Tap at screen coordinates.", ToolRegistry.i("x"), ToolRegistry.i("y")),
+        ToolRegistry.t("tap", "Tap at screen coordinates (real screen pixels from get_ui_tree bounds). " +
+            "Prefer click_node for tree elements, or click_ui_element when clicking something you saw in a screenshot.",
+            ToolRegistry.i("x"), ToolRegistry.i("y")),
         ToolRegistry.t("double_tap", "Double tap at coordinates.", ToolRegistry.i("x"), ToolRegistry.i("y")),
         ToolRegistry.t(
             "long_press", "Long press at coordinates (opens context menus, selection modes, app shortcuts).",
             ToolRegistry.i("x"), ToolRegistry.i("y"),
-            ToolRegistry.p("duration_ms", "INTEGER", "Press duration, default 800")
+            ToolRegistry.p("duration_ms", "INTEGER", "Press duration, default 800, minimum 600")
         ),
         ToolRegistry.t(
             "swipe", "Swipe between two points.",
@@ -56,9 +58,12 @@ object GestureTools {
             ToolRegistry.p("duration_ms", "INTEGER", "Drag duration, default 600")
         ),
         ToolRegistry.t(
-            "pinch", "Two-finger pinch/zoom (maps, photos, galleries).",
+            "pinch", "Two-finger pinch/zoom (maps, photos, galleries). " +
+                "mode=in = ZOOM IN / magnify: the two fingers start close together and SPREAD APART. " +
+                "mode=out = ZOOM OUT / shrink: the two fingers start far apart and PINCH TOGETHER.",
             ToolRegistry.i("x"), ToolRegistry.i("y"),
-            ToolRegistry.p("mode", "STRING", "in = zoom in, out = zoom out", req = true, enum = listOf("in", "out")),
+            ToolRegistry.p("mode", "STRING", "in = zoom in (fingers spread apart), out = zoom out (fingers come together)",
+                req = true, enum = listOf("in", "out")),
             ToolRegistry.p("distance", "INTEGER", "Finger travel in px, default 300")
         ),
         ToolRegistry.t(
@@ -80,12 +85,18 @@ object GestureTools {
             }
             "double_tap" -> {
                 val (x, y) = point2(args, ctx)
-                dispatch(svc, chainStrokes(listOf(pathOf(x, y, x, y) to 50L, pathOf(x, y, x, y) to 50L), gapMs = 90L))
+                // Two INDEPENDENT strokes with different start times = a real tap, gap, tap.
+                // (A continueStroke chain is ONE pointer held down - it can never produce two taps.)
+                val b = GestureDescription.Builder()
+                b.addStroke(GestureDescription.StrokeDescription(pathOf(x, y, x, y), 0, 60))
+                b.addStroke(GestureDescription.StrokeDescription(pathOf(x, y, x, y), 140, 60))
+                dispatch(svc, b.build())
                 ctx.ok("action" to "double_tap", "x" to x, "y" to y)
             }
             "long_press" -> {
                 val (x, y) = point2(args, ctx)
-                val dur = args.optInt("duration_ms", 800).coerceIn(300, 30_000)
+                // Floor of 600ms: the system long-press timeout is 400-500ms on many devices.
+                val dur = args.optInt("duration_ms", 800).coerceIn(600, 30_000)
                 dispatch(svc, stroke(pathOf(x, y, x, y), dur.toLong()))
                 ctx.ok("action" to "long_press", "x" to x, "y" to y, "duration_ms" to dur)
             }
@@ -108,6 +119,9 @@ object GestureTools {
                     "left" -> Point(c.x - reach, c.y)
                     else -> Point(c.x + reach, c.y)
                 }
+                // Clamp inside the screen: an out-of-bounds stroke is rejected by the system.
+                target.x = target.x.coerceIn(8, b.width() - 8)
+                target.y = target.y.coerceIn(8, b.height() - 8)
                 dispatch(svc, stroke(pathOf(c.x, c.y, target.x, target.y), 120L))
                 ctx.ok("action" to "fling", "direction" to dir)
             }
@@ -125,6 +139,9 @@ object GestureTools {
                     "left" -> c to Point(c.x - dx, c.y)
                     else -> c to Point(c.x + dx, c.y)
                 }
+                // Clamp the end point: 'large' scroll used to overshoot off-screen and get rejected.
+                p2.x = p2.x.coerceIn(8, b.width() - 8)
+                p2.y = p2.y.coerceIn(8, b.height() - 8)
                 dispatch(svc, stroke(pathOf(p1.x, p1.y, p2.x, p2.y), 400L))
                 delay(350)
                 ctx.ok("action" to "scroll", "direction" to dir, "amount" to amount)
@@ -163,22 +180,34 @@ object GestureTools {
                 val x2 = args.optInt("x2"); val y2 = args.optInt("y2")
                 val hold = args.optLong("hold_ms", 500L).coerceIn(100, 10_000)
                 val dur = args.optLong("duration_ms", 600L).coerceIn(100, 15_000)
-                dispatch(svc, chainStrokes(listOf(pathOf(x1, y1, x1, y1) to hold, pathOf(x1, y1, x2, y2) to dur), gapMs = 0L))
+                // Documented continuation pattern: the willContinue stroke must be dispatched FIRST and its
+                // continuation in the NEXT dispatchGesture call (same-gesture inclusion is undefined behaviour).
+                val holdStroke = GestureDescription.StrokeDescription(pathOf(x1, y1, x1, y1), 0, hold, true)
+                val b1 = GestureDescription.Builder(); b1.addStroke(holdStroke)
+                dispatch(svc, b1.build())
+                val continuation = holdStroke.continueStroke(pathOf(x1, y1, x2, y2), 0, dur, false)
+                val b2 = GestureDescription.Builder(); b2.addStroke(continuation)
+                dispatch(svc, b2.build())
                 delay(250)
                 ctx.ok("action" to "drag_and_drop")
             }
             "pinch" -> {
-                val cx = args.optInt("x"); val cy = args.optInt("y")
                 val mode = args.optString("mode", "in")
                 val dist = args.optInt("distance", 300).coerceIn(50, 2000)
                 val half = dist / 2
+                val sb = ctx.screenBounds()
+                // Default to screen centre; keep every stroke point on-screen (unclamped strokes are rejected).
+                val cx = args.optInt("x", sb.centerX()).coerceIn(half + 8, sb.width() - half - 8)
+                val cy = args.optInt("y", sb.centerY()).coerceIn(8, sb.height() - 8)
                 val p1 = Path(); val p2 = Path()
                 if (mode == "in") {
-                    p1.moveTo((cx - half).toFloat(), cy.toFloat()); p1.lineTo((cx + half / 3).toFloat(), cy.toFloat())
-                    p2.moveTo((cx + half).toFloat(), cy.toFloat()); p2.lineTo((cx - half / 3).toFloat(), cy.toFloat())
+                    // ZOOM IN: fingers start close together and SPREAD APART (each finger stays on its own side).
+                    p1.moveTo((cx - half / 3).toFloat(), cy.toFloat()); p1.lineTo((cx - half).toFloat(), cy.toFloat())
+                    p2.moveTo((cx + half / 3).toFloat(), cy.toFloat()); p2.lineTo((cx + half).toFloat(), cy.toFloat())
                 } else {
-                    p1.moveTo((cx + half / 3).toFloat(), cy.toFloat()); p1.lineTo((cx - half).toFloat(), cy.toFloat())
-                    p2.moveTo((cx - half / 3).toFloat(), cy.toFloat()); p2.lineTo((cx + half).toFloat(), cy.toFloat())
+                    // ZOOM OUT: fingers start far apart and PINCH TOGETHER.
+                    p1.moveTo((cx - half).toFloat(), cy.toFloat()); p1.lineTo((cx - half / 3).toFloat(), cy.toFloat())
+                    p2.moveTo((cx + half).toFloat(), cy.toFloat()); p2.lineTo((cx + half / 3).toFloat(), cy.toFloat())
                 }
                 val b = GestureDescription.Builder()
                 b.addStroke(strokeDesc(p1, 450L))
@@ -192,20 +221,26 @@ object GestureTools {
                     ?: throw ToolException("custom_gesture requires a 'strokes' array.")
                 if (strokes.length() == 0) throw ToolException("strokes array is empty.")
                 if (strokes.length() > 10) throw ToolException("Maximum 10 strokes per gesture.")
-                val segments = ArrayList<Pair<Path, Long>>()
+                // Merge all strokes into ONE continuous path so the finger stays DOWN between strokes
+                // (required for pattern unlocks). The model-visible behaviour is unchanged:
+                // strokes run one after another with a short transition between them.
+                val path = Path()
+                var totalDur = 0L
                 for (i in 0 until strokes.length()) {
                     val s = strokes.getJSONObject(i)
                     val pts = s.optJSONArray("points") ?: throw ToolException("stroke[$i] is missing 'points'.")
                     if (pts.length() < 2) throw ToolException("stroke[$i] needs at least 2 points.")
                     val dur = s.optLong("duration_ms", (pts.length() * 60L)).coerceIn(50, 20_000)
-                    val path = Path()
-                    pts.getJSONObject(0).let { path.moveTo(it.optDouble("x").toFloat(), it.optDouble("y").toFloat()) }
+                    pts.getJSONObject(0).let {
+                        val fx = it.optDouble("x").toFloat(); val fy = it.optDouble("y").toFloat()
+                        if (i == 0) path.moveTo(fx, fy) else path.lineTo(fx, fy)
+                    }
                     for (j in 1 until pts.length()) {
                         pts.getJSONObject(j).let { path.lineTo(it.optDouble("x").toFloat(), it.optDouble("y").toFloat()) }
                     }
-                    segments.add(path to dur)
+                    totalDur += dur + 80L
                 }
-                dispatch(svc, chainStrokes(segments, gapMs = 80L))
+                dispatch(svc, stroke(path, totalDur.coerceIn(50, 30_000)))
                 delay(200)
                 ctx.ok("action" to "custom_gesture", "strokes" to strokes.length())
             }
@@ -246,28 +281,6 @@ object GestureTools {
     /** Raw stroke for combining several simultaneous fingers (e.g. pinch). */
     private fun strokeDesc(path: Path, durationMs: Long): GestureDescription.StrokeDescription =
         GestureDescription.StrokeDescription(path, 0, durationMs)
-
-    /**
-     * Sequential strokes from one finger: each begins after the previous one ends (plus gapMs).
-     * Only the FINAL stroke may keep `willContinue = false`; every earlier stroke must mark
-     * `willContinue = true` or the system treats them as independent touches.
-     */
-    private fun chainStrokes(segments: List<Pair<Path, Long>>, gapMs: Long): GestureDescription {
-        val builder = GestureDescription.Builder()
-        var previous: GestureDescription.StrokeDescription? = null
-        var offset = 0L
-        for ((index, segment) in segments.withIndex()) {
-            val (path, dur) = segment
-            val willContinue = index < segments.lastIndex
-            previous = if (previous == null) {
-                GestureDescription.StrokeDescription(path, 0, dur, willContinue).also { builder.addStroke(it) }
-            } else {
-                previous.continueStroke(path, offset + gapMs, dur, willContinue).also { builder.addStroke(it) }
-            }
-            offset += dur + gapMs
-        }
-        return builder.build()
-    }
 
     /** Dispatch a gesture and block until the system confirms completion or cancellation. */
     private fun dispatch(svc: AgentAccessibilityService, gesture: GestureDescription) {

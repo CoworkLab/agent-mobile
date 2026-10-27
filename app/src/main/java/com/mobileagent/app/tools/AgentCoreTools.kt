@@ -29,7 +29,7 @@ object AgentCoreTools {
             "Run several simple, predictable actions in ONE step to save time. Use only when you already know " +
                 "what the screen will look like. Actions run in order; the batch stops at the first failure and " +
                 "reports what happened so far. Inside a batch target elements by query, never by node_id from an " +
-                "earlier screen. Not allowed inside a batch: batch_actions, ask_user, done, wait. " +
+                "earlier screen. Not allowed inside a batch: batch_actions, ask_user, done (wait IS allowed). " +
                 "Do NOT use it for unfamiliar screens, risky actions, or when the next step depends on reading the screen.",
             ToolRegistry.p(
                 "actions", "ARRAY",

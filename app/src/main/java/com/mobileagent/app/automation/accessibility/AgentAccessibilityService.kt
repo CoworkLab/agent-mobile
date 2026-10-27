@@ -143,7 +143,7 @@ class AgentAccessibilityService : AccessibilityService() {
             try {
                 takeScreenshot(
                     Display.DEFAULT_DISPLAY,
-                    Executors.newSingleThreadExecutor(),
+                    screenshotExecutor,
                     object : AccessibilityService.TakeScreenshotCallback {
                         override fun onSuccess(screenshotResult: AccessibilityService.ScreenshotResult) {
                             try {
@@ -176,6 +176,10 @@ class AgentAccessibilityService : AccessibilityService() {
     }
 
     private val handler = Handler(Looper.getMainLooper())
+
+    /** Shared executor for screenshot callbacks - a fresh executor per call leaked one thread per screenshot. */
+    private val screenshotExecutor: java.util.concurrent.ExecutorService =
+        java.util.concurrent.Executors.newSingleThreadExecutor()
 
     private var isWaitingForWhatsAppSend = false
     private var pendingWhatsAppMessage: String? = null
@@ -917,8 +921,9 @@ class AgentAccessibilityService : AccessibilityService() {
                         val rect = Rect()
                         target.getBoundsInScreen(rect)
                         if (rect.width() > 0 && rect.height() > 0) {
-                            longPressAt(rect.centerX().toFloat(), rect.centerY().toFloat())
-                            longPressed = true
+                            // Only advance the state machine when the long press TRULY completed,
+                            // otherwise stage 1 clicks the delete icon wherever it appears.
+                            longPressed = longPressAt(rect.centerX().toFloat(), rect.centerY().toFloat())
                         }
                     }
                     if (longPressed) {
@@ -1014,17 +1019,44 @@ class AgentAccessibilityService : AccessibilityService() {
         return false
     }
 
-    private fun longPressAt(x: Float, y: Float) {
+    private fun longPressAt(x: Float, y: Float): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            try {
+            return try {
                 val path = Path().apply { moveTo(x, y) }
                 val gesture = GestureDescription.Builder()
-                    .addStroke(GestureDescription.StrokeDescription(path, 0, 700))
+                    .addStroke(GestureDescription.StrokeDescription(path, 0, 800))
                     .build()
-                dispatchGesture(gesture, null, null)
+                dispatchGestureBlocking(gesture)
             } catch (e: Exception) {
                 Log.d(TAG, "Long-press gesture failed: ${e.message}")
+                false
             }
+        }
+        return false
+    }
+
+    /**
+     * Dispatch a gesture and block until the system confirms completion.
+     * Returns true ONLY when the gesture was accepted AND completed. Never call from the main
+     * thread - there it degrades to a queued fire-and-forget dispatch (a blocking await would deadlock).
+     */
+    fun dispatchGestureBlocking(gesture: GestureDescription, timeoutMs: Long = 8000L): Boolean {
+        return try {
+            val latch = java.util.concurrent.CountDownLatch(1)
+            val completed = java.util.concurrent.atomic.AtomicBoolean(false)
+            val accepted = dispatchGesture(gesture, object : GestureResultCallback() {
+                override fun onCompleted(g: GestureDescription?) { completed.set(true); latch.countDown() }
+                override fun onCancelled(g: GestureDescription?) { latch.countDown() }
+            }, null)
+            if (!accepted) return false
+            if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) {
+                // Cannot block the thread the callback is delivered on.
+                return true
+            }
+            latch.await(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS) && completed.get()
+        } catch (e: Exception) {
+            Log.d(TAG, "Blocking gesture dispatch failed: ${e.message}")
+            false
         }
     }
 
@@ -1386,13 +1418,11 @@ class AgentAccessibilityService : AccessibilityService() {
         val dm = resources.displayMetrics
         val x = (xPercent / 100f) * dm.widthPixels
         val y = (yPercent / 100f) * dm.heightPixels
-        clickAt(x, y)
-        return true
+        return clickAt(x, y)
     }
 
     fun tapAtAbsoluteCoordinates(x: Float, y: Float): Boolean {
-        clickAt(x, y)
-        return true
+        return clickAt(x, y)
     }
 
     fun clickNodeWithText(text: String): Boolean {
@@ -1683,11 +1713,16 @@ class AgentAccessibilityService : AccessibilityService() {
         val clickX = targetRect.centerX().toFloat()
         val clickY = targetRect.centerY().toFloat()
         val path = Path().apply { moveTo(clickX, clickY) }
+        // 800ms: the default system long-press timeout is 400ms and OEMs often raise it.
         val gesture = GestureDescription.Builder()
-            .addStroke(GestureDescription.StrokeDescription(path, 0, 450))
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 800))
             .build()
         try {
-            dispatchGesture(gesture, null, null)
+            val pressed = dispatchGestureBlocking(gesture)
+            if (!pressed) {
+                Log.e(TAG, "Long-press gesture did not complete")
+                return false
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Long-press gesture dispatch failed: ${e.message}")
             return false

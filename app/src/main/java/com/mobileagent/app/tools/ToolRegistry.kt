@@ -71,6 +71,15 @@ object ToolRegistry {
         t("go_to_background", "Stop the active conversation and put the agent into standby wake-word mode.", listOf()),
         t("inspect_screen", "Read the foreground app and accessible UI elements summary before interacting.",
             listOf()),
+        t("click_ui_element", "Click a UI element with best precision. When a screenshot is attached, pass x/y as " +
+                "NORMALIZED 0-1000 coordinates read from the image (image_px * 1000 / image_dimension). The agent maps " +
+                "them to the real screen and snaps to the nearest clickable element, so small estimation errors are " +
+                "corrected automatically. Alternatively pass element_id from get_ui_tree. This is the most accurate click tool.",
+            listOf(P("target_name", "STRING", "short name of what you are clicking", req = true),
+                P("x", "INTEGER", "normalized 0-1000 horizontal position from a screenshot"),
+                P("y", "INTEGER", "normalized 0-1000 vertical position from a screenshot"),
+                P("element_id", "INTEGER", "node id from get_ui_tree (alternative to x/y)"),
+                P("is_toggle", "BOOLEAN", "true when clicking a switch/checkbox/toggle"))),
         t("press_key", "Press a hardware-style key.",
             listOf(P("key", "STRING", "key name, e.g. enter, back, volume_up, volume_down, tab", req = true))),
         t("done", "Finish the current task. Always call this at the end with an honest report.",

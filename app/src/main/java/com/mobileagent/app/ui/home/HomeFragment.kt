@@ -298,7 +298,7 @@ class HomeFragment : Fragment() {
             in 17..21 -> "Good evening"
             else -> "Welcome back"
         }
-        binding.tvGreeting.text = "$timeGreeting, $userName"
+        binding.tvGreeting.text = if (userName.isBlank()) timeGreeting else "$timeGreeting, $userName"
 
         val currentLang = preferences.language.ifBlank { "Auto" }
         binding.tvQuickLanguageStatus.text = if (currentLang.contains("Auto", ignoreCase = true)) "Auto" else currentLang
