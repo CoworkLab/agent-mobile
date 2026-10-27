@@ -91,7 +91,7 @@ class SkillsActivity : AppCompatActivity() {
                 else Color.GRAY
             )
             textSize = 15f
-            fontFamily = "sans-serif-medium"
+            typeface = android.graphics.Typeface.create("sans-serif-medium", android.graphics.Typeface.BOLD)
         }
         texts.addView(title)
 

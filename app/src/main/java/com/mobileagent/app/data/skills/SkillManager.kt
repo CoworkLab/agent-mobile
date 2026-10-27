@@ -134,6 +134,9 @@ class SkillManager(
         return top
     }
 
+    private fun normalize(s: String): String =
+        s.lowercase(Locale.ROOT).replace(Regex("[^\\p{L}\\p{Nd}\\s]"), " ").replace(Regex("\\s+"), " ").trim()
+
     /** Compact prompt section describing available skills; null when there are none. */
     suspend fun promptSection(): String? {
         val enabled = try { dao.getEnabled() } catch (e: Exception) { return null }
