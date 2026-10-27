@@ -16,8 +16,8 @@ object AgentCoreTools {
 
     val NAMES: Set<String> = setOf(
         "batch_actions", "wait", "ask_user", "memory_save", "memory_recall",
-        "memory_forget", "update_plan", "schedule_task", "list_scheduled_tasks",
-        "cancel_scheduled_task"
+        "memory_forget", "skill_save", "update_plan", "schedule_task",
+        "list_scheduled_tasks", "cancel_scheduled_task"
     )
 
     /** Tools that must never run inside batch_actions (wait IS allowed - it is safe and useful between steps). */
